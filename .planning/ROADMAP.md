@@ -30,10 +30,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Notebook section "ResNet-50 Feature Extraction" runs and outputs feature maps with shape [B, 2048, 7, 7] for sample batch
   5. Notebook section "Feature Caching" runs and saves features to disk, then reloads them successfully
   6. Notebook runs end-to-end from top to feature extraction and produces cached feature files on disk
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD after planning
+- [ ] 01-01-PLAN.md — Project setup, dependencies, config module, data loading and preprocessing
+- [ ] 01-02-PLAN.md — ResNet-50 feature extraction, caching, notebook cell snippets
 
 ### Phase 2: Notebook Extension - Graph & Models
 **Goal**: Add notebook sections for graph construction, GraphSAGE model definition, and end-to-end forward pass verification
@@ -58,7 +59,7 @@ Plans:
   1. Notebook section "Training Configuration" runs and displays hyperparameters, device (MPS/CUDA/CPU), and reproducibility setup
   2. Notebook section "Training Loop" runs and trains GraphSAGE with progress bars, validation checks, early stopping
   3. Notebook section "Training Curves" runs and displays loss/accuracy plots over epochs
-  4. Notebook section "Evaluation Metrics" runs and displays accuracy, per-class F1, macro F1, and 16×16 confusion matrix heatmap
+  4. Notebook section "Evaluation Metrics" runs and displays accuracy, per-class F1, macro F1, and 16x16 confusion matrix heatmap
   5. Notebook section "GNN vs CNN Comparison" runs and compares GraphSAGE results against CNN baseline from reference notebook (per-class breakdown)
   6. Notebook section "Failure Analysis" runs and displays misclassified examples with predicted/actual labels
   7. Notebook runs end-to-end from top through complete training and evaluation, producing trained model checkpoint and all visualizations
@@ -90,7 +91,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Notebook Foundation - Data & Features | 0/TBD | Not started | - |
+| 1. Notebook Foundation - Data & Features | 0/2 | Not started | - |
 | 2. Notebook Extension - Graph & Models | 0/TBD | Not started | - |
 | 3. Notebook Completion - Training & Evaluation | 0/TBD | Not started | - |
 | 4. Notebook Finalization - Ablation Studies | 0/TBD | Not started | - |
