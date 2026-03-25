@@ -17,7 +17,7 @@
 - [ ] **MDL-01**: ResNet-50 feature extractor (frozen, layer4 output preserving 7x7 spatial structure)
 - [ ] **MDL-02**: k-NN spatial graph construction from feature map patches (49 nodes per image)
 - [ ] **MDL-03**: GraphSAGE classifier (message passing + global pooling + classification head)
-- [ ] **MDL-04**: CNN baseline (ResNet-50 + global avg pool + classifier) for fair comparison
+- [ ] **MDL-04**: CNN baseline comparison (reference: `reference/RVL-CDIP_ResNet50.ipynb` — already implemented)
 
 ### Training
 
@@ -68,32 +68,32 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| MDL-01 | — | Pending |
-| MDL-02 | — | Pending |
-| MDL-03 | — | Pending |
-| MDL-04 | — | Pending |
-| TRN-01 | — | Pending |
-| TRN-02 | — | Pending |
-| TRN-03 | — | Pending |
-| TRN-04 | — | Pending |
-| EVL-01 | — | Pending |
-| EVL-02 | — | Pending |
-| EVL-03 | — | Pending |
-| EVL-04 | — | Pending |
-| ABL-01 | — | Pending |
-| ABL-02 | — | Pending |
-| ABL-03 | — | Pending |
-| ABL-04 | — | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| MDL-01 | Phase 1 | Pending |
+| MDL-02 | Phase 2 | Pending |
+| MDL-03 | Phase 2 | Pending |
+| MDL-04 | Phase 2 | Pending |
+| TRN-01 | Phase 3 | Pending |
+| TRN-02 | Phase 3 | Pending |
+| TRN-03 | Phase 3 | Pending |
+| TRN-04 | Phase 3 | Pending |
+| EVL-01 | Phase 3 | Pending |
+| EVL-02 | Phase 3 | Pending |
+| EVL-03 | Phase 3 | Pending |
+| EVL-04 | Phase 3 | Pending |
+| ABL-01 | Phase 4 | Pending |
+| ABL-02 | Phase 4 | Pending |
+| ABL-03 | Phase 4 | Pending |
+| ABL-04 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20
+- Mapped to phases: 20
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-25*
-*Last updated: 2026-03-25 after initial definition*
+*Last updated: 2026-03-25 after roadmap creation*
