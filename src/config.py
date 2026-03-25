@@ -21,6 +21,7 @@ class Config:
     batch_size: int = None
     num_workers: int = None
     dataset_name: str = "chainyo/rvl-cdip"
+    sample_dataset_name: str = None
 
     def __post_init__(self):
         """Initialize device detection and load environment variables."""
@@ -38,6 +39,9 @@ class Config:
         self.hf_cache_dir = Path(os.environ.get("HF_CACHE_DIR", "./.hf_cache"))
         self.batch_size = int(os.environ.get("BATCH_SIZE", "32"))
         self.num_workers = int(os.environ.get("NUM_WORKERS", "0"))
+        self.sample_dataset_name = os.environ.get(
+            "SAMPLE_DATASET_NAME", "vaclavpechtor/rvl_cdip-small-200"
+        )
 
         # Print device info
         print(f"Device: {self.device}")

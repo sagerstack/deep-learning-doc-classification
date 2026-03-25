@@ -9,25 +9,8 @@ from torchvision import transforms
 from src.config import Config
 
 
-# 16 RVL-CDIP class labels in order
-RVL_CDIP_LABELS = [
-    "letter",
-    "form",
-    "email",
-    "handwritten",
-    "advertisement",
-    "scientific_report",
-    "scientific_publication",
-    "specification",
-    "file_folder",
-    "news_article",
-    "budget",
-    "invoice",
-    "presentation",
-    "questionnaire",
-    "resume",
-    "memo",
-]
+# Populated in-place by load_rvl_cdip from dataset features.
+RVL_CDIP_LABELS: List[str] = []
 
 
 def get_transform():
@@ -58,52 +41,52 @@ def load_rvl_cdip(config: Config) -> Dict[str, List]:
         config: Config object with mode, sample_size, dataset_name, etc.
 
     Returns:
-        Dict with keys "train", "validation", "test", each containing either:
+        Dict with keys "train", "validation", and optionally "test",
+        each containing either:
         - List of dicts (sample mode): [{"image": PIL.Image, "label": int}, ...]
-        - DatasetDict splits (full mode): HuggingFace DatasetDict
+        - DatasetDict splits (full mode): HuggingFace Dataset objects
 
     Modes:
-        - "sample": Streaming mode, shuffled sample of size config.sample_size
-        - "full": Full dataset download to config.hf_cache_dir
+        - "sample": Loads RVL-CDIP Small-200 (3,200 images, balanced 200/class).
+          Splits: train (2,560) + validation (640). No test split.
+        - "full": Full RVL-CDIP dataset download to config.hf_cache_dir.
+          Splits: train (320k) + validation (40k) + test (40k).
     """
     if config.mode == "sample":
-        print(f"Loading dataset in streaming mode (sample_size={config.sample_size})...")
+        print(f"Loading sample dataset: {config.sample_dataset_name}...")
 
-        # Load with streaming
-        dataset = load_dataset(config.dataset_name, streaming=True)
+        dataset = load_dataset(
+            config.sample_dataset_name,
+            cache_dir=str(config.hf_cache_dir),
+        )
 
-        # For each split, shuffle and take sample_size items
+        RVL_CDIP_LABELS.clear()
+        RVL_CDIP_LABELS.extend(dataset["train"].features["label"].names)
+
         data = {}
-        for split in ["train", "val", "test"]:
-            # Shuffle before taking to get random sample
-            shuffled = dataset[split].shuffle(
-                seed=config.seed,
-                buffer_size=10000
-            )
-            # Take sample and convert to list
-            samples = list(shuffled.take(config.sample_size))
-            # Store with consistent key name
-            key = "validation" if split == "val" else split
-            data[key] = samples
-            print(f"Loaded {key}: {len(samples)} samples")
+        for split_name in dataset.keys():
+            key = "validation" if split_name == "val" else split_name
+            data[key] = list(dataset[split_name])
+            print(f"Loaded {key}: {len(data[key])} samples")
 
         return data
 
     elif config.mode == "full":
         print(f"Loading full dataset to cache: {config.hf_cache_dir}...")
 
-        # Load full dataset
         dataset = load_dataset(
             config.dataset_name,
-            cache_dir=str(config.hf_cache_dir)
+            cache_dir=str(config.hf_cache_dir),
         )
 
-        # Print split sizes and normalize keys
+        RVL_CDIP_LABELS.clear()
+        RVL_CDIP_LABELS.extend(dataset["train"].features["label"].names)
+
         data = {}
-        for split in ["train", "val", "test"]:
-            key = "validation" if split == "val" else split
-            data[key] = dataset[split]
-            print(f"Loaded {key}: {len(dataset[split])} samples")
+        for split_name in dataset.keys():
+            key = "validation" if split_name == "val" else split_name
+            data[key] = dataset[split_name]
+            print(f"Loaded {key}: {len(dataset[split_name])} samples")
 
         return data
 
@@ -121,10 +104,8 @@ def display_samples(data: List[Dict], n: int = 10):
     Returns:
         matplotlib.figure.Figure: The figure object for notebook display
     """
-    # Limit to available samples
     n = min(n, len(data))
 
-    # Create 2-row grid
     cols = (n + 1) // 2
     fig, axes = plt.subplots(2, cols, figsize=(cols * 3, 6))
     axes = axes.flatten()
@@ -133,13 +114,12 @@ def display_samples(data: List[Dict], n: int = 10):
         sample = data[i]
         image = sample["image"]
         label_idx = sample["label"]
-        label_name = RVL_CDIP_LABELS[label_idx]
+        label_name = RVL_CDIP_LABELS[label_idx] if RVL_CDIP_LABELS else str(label_idx)
 
         axes[i].imshow(image, cmap="gray")
         axes[i].set_title(label_name)
         axes[i].axis("off")
 
-    # Hide unused subplots
     for i in range(n, len(axes)):
         axes[i].axis("off")
 
