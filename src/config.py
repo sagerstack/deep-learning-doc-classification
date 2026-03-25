@@ -20,7 +20,7 @@ class Config:
     hf_cache_dir: Path = None
     batch_size: int = None
     num_workers: int = None
-    dataset_name: str = "aharley/rvl_cdip"
+    dataset_name: str = "chainyo/rvl-cdip"
 
     def __post_init__(self):
         """Initialize device detection and load environment variables."""
