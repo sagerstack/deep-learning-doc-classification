@@ -14,6 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Notebook Foundation - Data & Features** - Notebook sections: imports, data loading, preprocessing, feature extraction, caching
 - [ ] **Phase 2: Notebook Extension - Graph & Models** - Notebook sections: graph construction, GraphSAGE model, CNN baseline, end-to-end forward pass
+- [ ] **Phase 2.1: Hybrid Fusion + Positional Encoding** (INSERTED) - Augment GraphSAGE with hybrid CNN+GNN fusion and 2D positional encoding
 - [ ] **Phase 3: Notebook Completion - Training & Evaluation** - Notebook sections: training loop, evaluation metrics, comparison plots, failure analysis
 - [ ] **Phase 4: Notebook Finalization - Ablation Studies** - Notebook sections: ablation experiments, results tables, RVL-CDIP-N evaluation
 
@@ -51,6 +52,23 @@ Plans:
 Plans:
 - [ ] TBD after planning
 
+### Phase 2.1: Hybrid Fusion + Positional Encoding (INSERTED)
+**Goal**: Augment the existing GraphSAGE model with hybrid CNN+GNN fusion (concatenating ResNet-50 avgpool global features with GNN graph-level embeddings) and 2D positional encoding on graph nodes for spatial awareness
+**Depends on**: Phase 1 (uses features.py, graph.py, model.py from Phase 1/2)
+**Requirements**: MDL-03 (enhanced), EVL-03
+**Success Criteria** (what must be TRUE):
+  1. Feature caching extracts BOTH layer4 [2048,7,7] AND avgpool [2048] from the fine-tuned ResNet-50
+  2. Graph construction injects normalized 2D positional encoding (row, col) onto node features [2048] -> [2050]
+  3. Graph Data objects carry global_feat as custom attribute that survives PyG batching correctly
+  4. HybridGraphSAGE model takes both graph data and global features, producing logits [B, 16]
+  5. GraphSAGE notebook updated to use hybrid model, trains and evaluates successfully
+  6. Comparison shows hybrid model results vs baseline ResNet-50 and vs plain GraphSAGE
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02.1-01-PLAN.md — Hybrid feature extraction, PE graph construction, HybridGraphSAGE model
+- [ ] 02.1-02-PLAN.md — Notebook cell snippets for hybrid fusion pipeline
+
 ### Phase 3: Notebook Completion - Training & Evaluation
 **Goal**: Add notebook sections for training loop, evaluation metrics, comparison analysis, and comprehensive visualizations
 **Depends on**: Phase 2
@@ -87,11 +105,12 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 → 2 → 2.1 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Notebook Foundation - Data & Features | 0/2 | Not started | - |
 | 2. Notebook Extension - Graph & Models | 0/TBD | Not started | - |
+| 2.1. Hybrid Fusion + Positional Encoding | 0/2 | Planning complete | - |
 | 3. Notebook Completion - Training & Evaluation | 0/TBD | Not started | - |
 | 4. Notebook Finalization - Ablation Studies | 0/TBD | Not started | - |
