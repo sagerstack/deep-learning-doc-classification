@@ -12,21 +12,21 @@ from src.config import Config
 
 
 def create_resnet_extractor(config: Config):
-    """Create frozen ResNet-50 feature extractor outputting layer4.
+    """Create frozen ResNet-50 feature extractor outputting layer4 and avgpool.
 
     Args:
         config: Config object with device
 
     Returns:
-        Feature extractor model that returns layer4 output [B, 2048, 7, 7]
+        Feature extractor model that returns layer4 [B, 2048, 7, 7] + avgpool [B, 2048, 1, 1]
     """
     # Load ResNet-50 with modern weights API (NOT deprecated pretrained=True)
     model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
 
-    # Extract layer4 output (before avgpool) to preserve spatial structure
+    # Extract layer4 output (spatial) and avgpool (global context)
     extractor = create_feature_extractor(
         model,
-        return_nodes={"layer4": "layer4"}
+        return_nodes={"layer4": "layer4", "avgpool": "avgpool"}
     )
 
     # Set to eval mode (critical for BatchNorm/Dropout) and freeze all parameters
@@ -41,14 +41,45 @@ def create_resnet_extractor(config: Config):
     num_params = sum(p.numel() for p in extractor.parameters())
     print(f"ResNet-50 feature extractor loaded")
     print(f"Parameters: {num_params:,} (all frozen)")
-    print(f"Output: layer4 [B, 2048, 7, 7]")
+    print(f"Output: layer4 [B, 2048, 7, 7] + avgpool [B, 2048, 1, 1]")
+    print(f"Device: {config.device}")
+
+    return extractor
+
+
+def create_extractor_from_trained(model, config: Config):
+    """Create layer4 + avgpool feature extractor from an already-trained ResNet-50.
+
+    Unlike create_resnet_extractor which loads fresh pretrained weights,
+    this wraps an existing fine-tuned model to extract its adapted features.
+
+    Args:
+        model: Trained ResNet-50 model (with fine-tuned backbone)
+        config: Config object with device
+
+    Returns:
+        Feature extractor that returns layer4 [B, 2048, 7, 7] + avgpool [B, 2048, 1, 1]
+    """
+    extractor = create_feature_extractor(
+        model,
+        return_nodes={"layer4": "layer4", "avgpool": "avgpool"}
+    )
+    extractor.eval()
+    for param in extractor.parameters():
+        param.requires_grad = False
+    extractor = extractor.to(config.device)
+
+    num_params = sum(p.numel() for p in extractor.parameters())
+    print(f"Fine-tuned feature extractor loaded")
+    print(f"Parameters: {num_params:,} (all frozen for extraction)")
+    print(f"Output: layer4 [B, 2048, 7, 7] + avgpool [B, 2048, 1, 1]")
     print(f"Device: {config.device}")
 
     return extractor
 
 
 def extract_features_batch(extractor, images: torch.Tensor, device):
-    """Extract layer4 features from a batch of preprocessed images.
+    """Extract layer4 spatial features and avgpool global features from a batch.
 
     Args:
         extractor: Feature extractor model from create_resnet_extractor
@@ -56,16 +87,18 @@ def extract_features_batch(extractor, images: torch.Tensor, device):
         device: Device to run extraction on
 
     Returns:
-        Tensor [B, 2048, 7, 7] of layer4 features on CPU (device-agnostic)
+        Tuple of (layer4_features [B, 2048, 7, 7], avgpool_features [B, 2048])
+        Both on CPU for device-agnostic caching
     """
     images = images.to(device)
 
     with torch.no_grad():
         output = extractor(images)
-        features = output["layer4"]
+        layer4_features = output["layer4"]
+        avgpool_features = output["avgpool"].squeeze(-1).squeeze(-1)  # [B, 2048, 1, 1] -> [B, 2048]
 
     # Move to CPU for device-agnostic caching
-    return features.cpu()
+    return layer4_features.cpu(), avgpool_features.cpu()
 
 
 def cache_features(samples: List[Dict], extractor, transform, config: Config, split: str):
@@ -96,20 +129,21 @@ def cache_features(samples: List[Dict], extractor, transform, config: Config, sp
             transform(sample["image"]) for sample in batch_samples
         ])
 
-        # Extract features [B, 2048, 7, 7]
-        batch_features = extract_features_batch(
+        # Extract features: layer4 [B, 2048, 7, 7] + avgpool [B, 2048]
+        layer4_features, avgpool_features = extract_features_batch(
             extractor, batch_images, config.device
         )
 
-        # Save each feature individually
+        # Save each feature individually with both spatial and global features
         for i, sample in enumerate(batch_samples):
             idx = batch_start + i
             cache_path = cache_dir / f"{idx:06d}.pt"
 
             torch.save(
                 {
-                    "features": batch_features[i],  # [2048, 7, 7]
-                    "label": sample["label"],       # int
+                    "features": layer4_features[i],      # [2048, 7, 7]
+                    "global_feat": avgpool_features[i],  # [2048]
+                    "label": sample["label"],            # int
                 },
                 cache_path
             )
