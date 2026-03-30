@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from dotenv import load_dotenv
 
 
 @dataclass
@@ -25,6 +26,11 @@ class Config:
 
     def __post_init__(self):
         """Initialize device detection and load environment variables."""
+        # Load env file: ENV_PROFILE=cluster loads .env.cluster, default is .env.mini
+        profile = os.environ.get("ENV_PROFILE", "mini")
+        env_file = Path(__file__).parent.parent / f".env.{profile}"
+        load_dotenv(env_file, override=False)
+
         # Device detection: MPS -> CUDA -> CPU fallback
         self.device = torch.device(
             "mps" if torch.backends.mps.is_available()
