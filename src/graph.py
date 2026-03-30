@@ -179,3 +179,83 @@ def build_graph_dataset_hybrid(
         )
         graphs.append(graph)
     return graphs
+
+
+def feature_map_to_graph_text_aware(
+    features: torch.Tensor,
+    global_feat: torch.Tensor,
+    text_density: torch.Tensor,
+    label: int,
+    edge_index: torch.Tensor,
+) -> Data:
+    """Convert spatial feature map to PyG Data with positional encoding, global features, and text density.
+
+    Extends the hybrid graph construction by appending a per-node text density
+    scalar derived from doctr DBNet probability maps. Each node gains one extra
+    feature channel representing how much text covers that spatial grid cell.
+
+    Args:
+        features: Spatial features [C, H, W] — e.g., [2048, 7, 7] from ResNet-50 layer4
+        global_feat: Global features [C] — e.g., [2048] from ResNet-50 avgpool
+        text_density: Text density heatmap [H, W] — e.g., [7, 7] from doctr
+        label: Integer class label
+        edge_index: Tensor [2, num_edges] from build_grid_edge_index
+
+    Returns:
+        PyG Data(x=[num_nodes, C+3], edge_index=[2, num_edges], y=[1], global_feat=[1, C])
+        where node features = CNN features [C] + PE [2] + text density [1] = C+3
+    """
+    c, h, w = features.shape
+
+    # Reshape CNN features to node features [H*W, C]
+    x = features.reshape(c, h * w).T
+
+    # Add 2D positional encoding -> [H*W, C+2]
+    x = add_positional_encoding_2d(x, grid_h=h, grid_w=w)
+
+    # Append text density as per-node feature -> [H*W, C+3]
+    td_flat = text_density.reshape(h * w, 1).to(x.device)  # [H*W, 1]
+    x = torch.cat([x, td_flat], dim=1)
+
+    # Create PyG Data object
+    y = torch.tensor([label], dtype=torch.long)
+    data = Data(x=x, edge_index=edge_index, y=y)
+
+    # Store global_feat as 2D [1, C] for correct PyG batching
+    data.global_feat = global_feat.unsqueeze(0)
+
+    return data
+
+
+def build_graph_dataset_text_aware(
+    cached_features: List[Dict],
+    edge_index: torch.Tensor,
+) -> List[Data]:
+    """Convert cached features with text_density into text-aware PyG Data objects.
+
+    Args:
+        cached_features: List of dicts with "features" [C, H, W], "global_feat" [C],
+                         "text_density" [H, W], and "label" int.
+                         Raises ValueError if any item is missing "text_density".
+        edge_index: Shared edge_index from build_grid_edge_index
+
+    Returns:
+        List of PyG Data objects with positional encoding, global features, and text density
+    """
+    graphs = []
+    for i, item in enumerate(cached_features):
+        if "text_density" not in item:
+            raise ValueError(
+                f"Item at index {i} is missing required 'text_density' key. "
+                f"Available keys: {list(item.keys())}. "
+                "Run augment_cache_with_text_density first to add text density to cached features."
+            )
+        graph = feature_map_to_graph_text_aware(
+            item["features"],
+            item["global_feat"],
+            item["text_density"],
+            item["label"],
+            edge_index,
+        )
+        graphs.append(graph)
+    return graphs
