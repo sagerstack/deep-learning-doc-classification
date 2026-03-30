@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The GraphSAGE model must demonstrate whether graph-based spatial reasoning improves document classification over CNN-only baselines — with clear, reproducible evidence.
-**Current focus:** Phase 2.1 - Hybrid Fusion + Positional Encoding
+**Current focus:** Phase 2.2 - Text-Aware Hybrid GNN
 
 ## Current Position
 
-Phase: 2.1 of 4 (Hybrid Fusion + Positional Encoding)
-Plan: 2 of TBD (paused at checkpoint)
-Status: In progress — awaiting human verification
-Last activity: 2026-03-30 — Completed Task 1 of 02.1-02-PLAN.md, paused at human-verify checkpoint
+Phase: 2.2 of 4 (Text-Aware Hybrid GNN)
+Plan: 1 of TBD (completed)
+Status: In progress
+Last activity: 2026-03-30 — Completed 02.2-01-PLAN.md (text density extraction + text-aware graph + TextAwareGraphSAGE)
 
-Progress: [████░░░░░░] ~35%
+Progress: [█████░░░░░] ~45%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 8min
-- Total execution time: 0.3 hours
+- Total execution time: 0.4 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [████░░░░░░] ~35%
 |-------|-------|-------|----------|
 | 01-notebook-foundation-data-features | 1 | 12min | 12min |
 | 02.1-hybrid-fusion-positional-encoding | 2 | 6min | 3min |
+| 02.2-text-aware-hybrid-gnn | 1 | 7min | 7min |
 
 **Recent Trend:**
-- Last 5 plans: 12min, 4min
-- Trend: Accelerating (4min vs 12min avg)
+- Last 5 plans: 12min, 4min, 7min
+- Trend: Stable ~7min
 
 *Updated after each plan completion*
 
@@ -54,19 +55,22 @@ Recent decisions affecting current work:
 - **[02.1-01]** Normalized 2D coordinates (2 dims) over sinusoidal PE (64+ dims) to minimize overfitting
 - **[02.1-01]** Store global_feat as [1, 2048] for correct PyG batching to [batch_size, 2048]
 - **[02.1-01]** Direct concatenation fusion without CNN projection (parameter-efficient on 2560 samples)
+- **[02.2-01]** Raw DBNet probability map (return_model_output=True) over bounding-box reconstruction for text density
+- **[02.2-01]** MPS falls back to CPU for doctr inference (doctr lacks MPS support)
+- **[02.2-01]** TextAwareGraphSAGE as independent class (not subclass of HybridGraphSAGE) for independent evolution
 
 ### Pending Todos
 
-None yet.
+- poetry.lock not regenerated via `poetry add` (SSL cert issue). Package installed in venv and declared in pyproject.toml. Run `poetry lock --no-update` in a stable network environment.
 
 ### Blockers/Concerns
 
-None yet.
+- SSL certificate verification fails in current environment (corporate/self-signed cert). Workaround in place (ssl bypass + curl --insecure for model weights). Does not affect runtime.
 
 ## Session Continuity
 
-Last session: 2026-03-30 06:19 UTC
-Stopped at: 02.1-02-PLAN.md Task 1 complete (477d36d), paused at Task 2 (human-verify checkpoint)
+Last session: 2026-03-30 14:31 UTC
+Stopped at: 02.2-01-PLAN.md complete (1e31ebb)
 Resume file: None
 
-**Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the human verification checkpoint.
+**Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the 02.1-02 human verification checkpoint. Phase 02.2-02 (notebook integration) is the next plan to execute.
