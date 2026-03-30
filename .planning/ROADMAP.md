@@ -15,6 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Notebook Foundation - Data & Features** - Notebook sections: imports, data loading, preprocessing, feature extraction, caching
 - [ ] **Phase 2: Notebook Extension - Graph & Models** - Notebook sections: graph construction, GraphSAGE model, CNN baseline, end-to-end forward pass
 - [ ] **Phase 2.1: Hybrid Fusion + Positional Encoding** (INSERTED) - Augment GraphSAGE with hybrid CNN+GNN fusion and 2D positional encoding
+- [ ] **Phase 2.2: Text-Aware Hybrid GNN** (INSERTED) - Add text density features to graph nodes for text-aware document classification
 - [ ] **Phase 3: Notebook Completion - Training & Evaluation** - Notebook sections: training loop, evaluation metrics, comparison plots, failure analysis
 - [ ] **Phase 4: Notebook Finalization - Ablation Studies** - Notebook sections: ablation experiments, results tables, RVL-CDIP-N evaluation
 
@@ -69,6 +70,22 @@ Plans:
 - [ ] 02.1-01-PLAN.md — Hybrid feature extraction, PE graph construction, HybridGraphSAGE model
 - [ ] 02.1-02-PLAN.md — Notebook cell snippets for hybrid fusion pipeline
 
+### Phase 2.2: Text-Aware Hybrid GNN (INSERTED)
+**Goal**: Add text density features (via doctr DBNet detector) as an additional node feature in the hybrid GNN, augmenting the baseline notebook's caching and creating a text-aware hybrid notebook for comparison
+**Depends on**: Phase 2.1 (uses HybridGraphSAGE, hybrid graph construction, cached features)
+**Requirements**: MDL-03 (enhanced)
+**Success Criteria** (what must be TRUE):
+  1. Text detector (python-doctr) installed as dependency
+  2. Baseline notebook has a new additive cell that augments existing cache with text_density [7,7] per sample
+  3. Graph construction supports optional text_density feature (2050 -> 2051 node dims when present)
+  4. New text-aware hybrid notebook trains and evaluates TextAwareGraphSAGE with node_dim=2051
+  5. Comparison shows text-aware hybrid vs plain hybrid vs CNN baseline per-class results
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02.2-01-PLAN.md — Text density extraction module, text-aware graph construction, TextAwareGraphSAGE model
+- [ ] 02.2-02-PLAN.md — Baseline notebook cache augmentation cell, text-aware hybrid notebook
+
 ### Phase 3: Notebook Completion - Training & Evaluation
 **Goal**: Add notebook sections for training loop, evaluation metrics, comparison analysis, and comprehensive visualizations
 **Depends on**: Phase 2
@@ -105,12 +122,13 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 2.1 → 3 → 4
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Notebook Foundation - Data & Features | 0/2 | Not started | - |
 | 2. Notebook Extension - Graph & Models | 0/TBD | Not started | - |
 | 2.1. Hybrid Fusion + Positional Encoding | 0/2 | Planning complete | - |
+| 2.2. Text-Aware Hybrid GNN | 0/2 | Planning complete | - |
 | 3. Notebook Completion - Training & Evaluation | 0/TBD | Not started | - |
 | 4. Notebook Finalization - Ablation Studies | 0/TBD | Not started | - |
