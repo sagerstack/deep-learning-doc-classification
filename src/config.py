@@ -26,9 +26,9 @@ class Config:
 
     def __post_init__(self):
         """Initialize device detection and load environment variables."""
-        # Load env file: ENV_PROFILE=cluster loads .env.cluster, default is .env.mini
+        # Load config file: ENV_PROFILE=cluster loads config.cluster, default is config.mini
         profile = os.environ.get("ENV_PROFILE", "mini")
-        env_file = Path(__file__).parent.parent / f".env.{profile}"
+        env_file = Path(__file__).parent.parent / f"config.{profile}"
         load_dotenv(env_file, override=False)
 
         # Device detection: MPS -> CUDA -> CPU fallback
