@@ -15,7 +15,10 @@ dependencies = [
     "datasets (>=4.8.4,<5.0.0)",
     "pillow (>=12.1.1,<13.0.0)",
     "tqdm (>=4.67.3,<5.0.0)",
-    "torch-geometric (>=2.7.0,<3.0.0)"
+    "torch-geometric (>=2.7.0,<3.0.0)",
+    "ipykernel (>=7.2.0,<8.0.0)",
+    "scikit-learn (>=1.8.0,<2.0.0)",
+    "python-doctr[torch] (>=1.0.1,<2.0.0)"
 ]
 
 
