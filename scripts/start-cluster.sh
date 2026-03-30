@@ -2,13 +2,19 @@
 # SUTD AI Mega Cluster setup and Jupyter startup
 # Run once after cloning, or after dependency changes
 #
-# One-time prerequisites (run manually):
+# One-time prerequisite (run manually):
 #   git clone https://github.com/sagerstack/deep-learning-doc-classification.git dl-project-gnn
-#   echo 'export ENV_PROFILE=cluster' >> ~/.bashrc && source ~/.bashrc
 
 set -e
 
 echo "=== Cluster Setup ==="
+
+# Set ENV_PROFILE in .bashrc if not already present
+if ! grep -q 'export ENV_PROFILE=cluster' ~/.bashrc 2>/dev/null; then
+    echo 'export ENV_PROFILE=cluster' >> ~/.bashrc
+    echo "Added ENV_PROFILE=cluster to ~/.bashrc"
+fi
+export ENV_PROFILE=cluster
 
 # Install dependencies
 echo "1/4 Locking dependencies..."
