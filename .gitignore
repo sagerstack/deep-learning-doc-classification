@@ -137,8 +137,6 @@ celerybeat.pid
 # Environments
 .env
 .envrc
-!.env.mini
-!.env.cluster
 .venv
 env/
 venv/
