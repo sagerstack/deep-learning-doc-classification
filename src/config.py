@@ -27,7 +27,7 @@ class Config:
     def __post_init__(self):
         """Initialize device detection and load environment variables."""
         # Load config file: ENV_PROFILE=cluster loads config.cluster, default is config.mini
-        profile = os.environ.get("ENV_PROFILE", "mini")
+        profile = os.environ.get("ENV_PROFILE", "local-mini")
         env_file = Path(__file__).parent.parent / f"config.{profile}"
         load_dotenv(env_file, override=False)
 

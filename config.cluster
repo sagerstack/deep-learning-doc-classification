@@ -3,4 +3,4 @@ DATA_MODE=full
 HF_CACHE_DIR=/home/jovyan/dl-project-gnn/data/rvl-cdip/hf_cache
 CACHE_DIR=/home/jovyan/dl-project-gnn/data/rvl-cdip/cached_features
 BATCH_SIZE=64
-NUM_WORKERS=4
+NUM_WORKERS=0

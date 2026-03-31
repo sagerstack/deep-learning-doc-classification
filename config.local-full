@@ -1,0 +1,6 @@
+# Local Mac — full dataset on external drive
+DATA_MODE=full
+HF_CACHE_DIR=/Volumes/sp-ext/rvl-cdip/hf_cache
+CACHE_DIR=/Volumes/sp-ext/rvl-cdip/cached_features
+BATCH_SIZE=32
+NUM_WORKERS=0
