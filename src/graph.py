@@ -93,6 +93,69 @@ def build_graph_dataset(
     return graphs
 
 
+def feature_map_to_graph_feature_knn(
+    features: torch.Tensor,
+    label: int,
+    k: int = 8,
+) -> Data:
+    """Convert spatial feature map to PyG Data using feature-space k-NN edges.
+
+    Unlike grid-based construction where every image gets the same edge topology,
+    this connects nodes whose CNN features are most similar. Each document gets
+    a unique graph structure reflecting its content layout.
+
+    Experiment 3: Tests whether document-specific graph topology outperforms
+    fixed grid edges for classification.
+
+    Args:
+        features: Spatial features [C, H, W] — e.g., [2048, 7, 7]
+        label: Integer class label
+        k: Number of nearest neighbors per node in feature space
+
+    Returns:
+        PyG Data(x=[num_nodes, C], edge_index=[2, num_edges], y=[1])
+    """
+    c, h, w = features.shape
+    x = features.reshape(c, h * w).T  # [H*W, C]
+    y = torch.tensor([label], dtype=torch.long)
+
+    # Build k-NN edges in feature space using pairwise cosine distance
+    # Pure torch implementation — no torch-cluster dependency needed for 49 nodes
+    x_norm = x / (x.norm(dim=1, keepdim=True) + 1e-8)
+    sim = x_norm @ x_norm.T  # [N, N] cosine similarity
+    sim.fill_diagonal_(-float('inf'))  # exclude self-loops
+    _, topk_indices = sim.topk(k, dim=1)  # [N, k] nearest neighbors
+
+    sources = torch.arange(x.shape[0]).unsqueeze(1).expand_as(topk_indices).flatten()
+    targets = topk_indices.flatten()
+    edge_index = torch.stack([sources, targets], dim=0)
+
+    return Data(x=x, edge_index=edge_index, y=y)
+
+
+def build_graph_dataset_feature_knn(
+    cached_features: List[Dict],
+    k: int = 8,
+) -> List[Data]:
+    """Convert cached features into PyG Data objects with feature-space k-NN edges.
+
+    Each document gets a unique graph topology based on CNN feature similarity
+    between spatial regions. No shared edge_index — edges are per-document.
+
+    Args:
+        cached_features: List of dicts with "features" [C, H, W] and "label" int
+        k: Number of nearest neighbors per node
+
+    Returns:
+        List of PyG Data objects with document-specific edge structures
+    """
+    graphs = []
+    for item in cached_features:
+        graph = feature_map_to_graph_feature_knn(item["features"], item["label"], k=k)
+        graphs.append(graph)
+    return graphs
+
+
 def add_positional_encoding_2d(x: torch.Tensor, grid_h: int = 7, grid_w: int = 7) -> torch.Tensor:
     """Append normalized 2D positional encoding to node features.
 
