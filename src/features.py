@@ -4,11 +4,67 @@ from pathlib import Path
 from typing import Dict, List
 
 import torch
+import torch.nn as nn
 from torchvision.models import resnet50, ResNet50_Weights
 from torchvision.models.feature_extraction import create_feature_extractor
 from tqdm import tqdm
 
 from src.config import Config
+
+
+def _unwrap_resnet_checkpoint(checkpoint) -> Dict[str, torch.Tensor]:
+    """Normalize checkpoint formats to a plain ResNet-50 state dict.
+
+    Supports:
+    - raw ``state_dict`` files saved via ``torch.save(model.state_dict(), path)``
+    - checkpoint dicts containing ``model_state_dict``
+    """
+    if not isinstance(checkpoint, dict):
+        raise TypeError(f"Expected checkpoint dict, got {type(checkpoint).__name__}")
+
+    if "model_state_dict" in checkpoint:
+        state_dict = checkpoint["model_state_dict"]
+    else:
+        state_dict = checkpoint
+
+    if "fc.weight" not in state_dict:
+        raise ValueError("Checkpoint does not look like a ResNet-50 classifier state_dict")
+
+    return state_dict
+
+
+def load_trained_resnet50(checkpoint_path: str | Path, config: Config):
+    """Load a fine-tuned ResNet-50 classifier from disk.
+
+    This supports both checkpoint formats used in the repo:
+    - reference notebook: ``{\"model_state_dict\": ...}``
+    - baseline notebook: raw ``state_dict``
+
+    Args:
+        checkpoint_path: Path to the saved ``.pt`` checkpoint
+        config: Config object with device
+
+    Returns:
+        Loaded ResNet-50 model on ``config.device`` in eval mode
+    """
+    checkpoint_path = Path(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    state_dict = _unwrap_resnet_checkpoint(checkpoint)
+
+    num_classes = state_dict["fc.weight"].shape[0]
+
+    # weights=None avoids an unnecessary download; the checkpoint provides all weights.
+    model = resnet50(weights=None)
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+    model.load_state_dict(state_dict)
+    model.eval()
+    model = model.to(config.device)
+
+    print(f"Loaded fine-tuned ResNet-50 from {checkpoint_path}")
+    print(f"Detected classifier head: {num_classes} classes")
+    print(f"Device: {config.device}")
+
+    return model
 
 
 def create_resnet_extractor(config: Config):
@@ -78,6 +134,12 @@ def create_extractor_from_trained(model, config: Config):
     return extractor
 
 
+def create_extractor_from_checkpoint(checkpoint_path: str | Path, config: Config):
+    """Load a fine-tuned checkpoint and wrap it as a feature extractor."""
+    model = load_trained_resnet50(checkpoint_path, config)
+    return create_extractor_from_trained(model, config)
+
+
 def extract_features_batch(extractor, images: torch.Tensor, device):
     """Extract layer4 spatial features and avgpool global features from a batch.
 
@@ -124,6 +186,15 @@ def cache_features(samples: List[Dict], extractor, transform, config: Config, sp
         batch_end = min(batch_start + config.batch_size, len(samples))
         batch_samples = samples[batch_start:batch_end]
 
+        # Hugging Face Dataset slicing returns a dict of column lists, while list
+        # inputs return a list of per-sample dicts. Normalize to the latter.
+        if isinstance(batch_samples, dict):
+            batch_size = len(next(iter(batch_samples.values())))
+            batch_samples = [
+                {key: value[i] for key, value in batch_samples.items()}
+                for i in range(batch_size)
+            ]
+
         # Apply transform and stack into tensor [B, 3, 224, 224]
         batch_images = torch.stack([
             transform(sample["image"]) for sample in batch_samples
@@ -141,9 +212,9 @@ def cache_features(samples: List[Dict], extractor, transform, config: Config, sp
 
             torch.save(
                 {
-                    "features": layer4_features[i],      # [2048, 7, 7]
-                    "global_feat": avgpool_features[i],  # [2048]
-                    "label": sample["label"],            # int
+                    "features": layer4_features[i].clone(),      # [2048, 7, 7]
+                    "global_feat": avgpool_features[i].clone(),  # [2048]
+                    "label": sample["label"],                    # int
                 },
                 cache_path
             )
