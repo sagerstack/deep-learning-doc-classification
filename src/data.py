@@ -71,6 +71,22 @@ def load_rvl_cdip(config: Config) -> Dict[str, List]:
 
         return data
 
+    elif config.mode.startswith("sample-"):
+        print(f"Loading dataset from: {config.hf_cache_dir}...")
+        from datasets import load_from_disk
+
+        dataset = load_from_disk(str(config.hf_cache_dir))
+
+        RVL_CDIP_LABELS.clear()
+        RVL_CDIP_LABELS.extend(dataset["train"].features["label"].names)
+
+        data = {}
+        for split_name in dataset.keys():
+            data[split_name] = dataset[split_name]
+            print(f"Loaded {split_name}: {len(dataset[split_name])} samples")
+
+        return data
+
     elif config.mode == "full":
         print(f"Loading full dataset to cache: {config.hf_cache_dir}...")
 
@@ -91,7 +107,7 @@ def load_rvl_cdip(config: Config) -> Dict[str, List]:
         return data
 
     else:
-        raise ValueError(f"Unknown mode: {config.mode}. Use 'sample' or 'full'.")
+        raise ValueError(f"Unknown mode: {config.mode}. Use 'sample', 'sample-<N>k', or 'full'.")
 
 
 def display_samples(data: List[Dict], n: int = 10):

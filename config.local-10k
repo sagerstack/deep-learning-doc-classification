@@ -1,0 +1,6 @@
+# Local Mac — 10k stratified sample from full RVL-CDIP (8000/1000/1000 train/val/test)
+DATA_MODE=sample-10k
+HF_CACHE_DIR=./.hf-cache-small/rvl-cdip-10k
+CACHE_DIR=./.hf-cache-small/cached_features
+BATCH_SIZE=32
+NUM_WORKERS=0
