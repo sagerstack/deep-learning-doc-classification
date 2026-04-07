@@ -1,0 +1,50 @@
+<!-- Section 2: Graph Construction -->
+<section class="space-y-6">
+    <div class="flex items-center gap-4">
+        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-secondary-container">
+            <span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+        </div>
+        <h2 class="font-headline font-extrabold text-2xl border-l-4 border-primary pl-4">Graph Construction <span class="text-sm font-label text-slate-400 font-normal ml-2">{{ "%.1f"|format(graph_time_ms / 1000) }}s</span></h2>
+    </div>
+    <div class="grid grid-cols-2 gap-6">
+        <div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <p class="font-label text-[10px] uppercase text-slate-500 font-bold tracking-widest">Spatial Grid (k=8)</p>
+                <span class="font-label text-[10px] bg-slate-100 px-2 py-0.5 rounded">LOCAL</span>
+            </div>
+            <div class="h-32 flex items-center justify-center relative">
+                {{ grid_svg | safe }}
+            </div>
+        </div>
+        <div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <p class="font-label text-[10px] uppercase text-slate-500 font-bold tracking-widest">Feature k-NN (k=8)</p>
+                <span class="font-label text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded">NON-LOCAL</span>
+            </div>
+            <div class="h-32 flex items-center justify-center relative">
+                {{ knn_svg | safe }}
+            </div>
+        </div>
+    </div>
+    <div class="flex justify-between items-center p-4 bg-on-background/5 rounded-lg border-l-2 border-primary/30">
+        <div class="flex flex-col">
+            <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Total Nodes</span>
+            <span class="font-label text-xl font-bold">{{ graph_stats.num_nodes }}</span>
+        </div>
+        <div class="w-px h-8 bg-outline-variant/30"></div>
+        <div class="flex flex-col">
+            <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Grid Edges</span>
+            <span class="font-label text-xl font-bold">{{ graph_stats.grid_edges }}</span>
+        </div>
+        <div class="w-px h-8 bg-outline-variant/30"></div>
+        <div class="flex flex-col">
+            <span class="font-label text-[10px] uppercase text-slate-500 font-bold">k-NN Edges</span>
+            <span class="font-label text-xl font-bold">{{ graph_stats.knn_edges }}</span>
+        </div>
+        <div class="w-px h-8 bg-outline-variant/30"></div>
+        <div class="flex flex-col">
+            <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Avg Degree</span>
+            <span class="font-label text-xl font-bold">{{ "%.1f"|format(graph_stats.avg_degree) }}</span>
+        </div>
+    </div>
+</section>

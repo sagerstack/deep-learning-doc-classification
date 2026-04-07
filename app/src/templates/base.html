@@ -79,6 +79,11 @@
     <link rel="stylesheet" href="/static/css/app.css"/>
     <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: flex; }
+        .htmx-request .hide-on-request { display: none; }
+    </style>
 </head>
 <body class="bg-surface text-on-surface selection:bg-primary-fixed">
 
@@ -101,16 +106,20 @@
     <!-- Left Panel: Sidebar -->
     <aside class="h-screen w-[35%] sticky left-0 top-16 bg-slate-50 flex flex-col p-8 space-y-8 border-r border-slate-200/10 overflow-y-auto">
         {% block upload_zone %}
-        <form id="upload-form" hx-post="/classify" hx-target="#results" hx-swap="innerHTML" hx-encoding="multipart/form-data">
+        <form id="upload-form" hx-post="/classify" hx-target="#results" hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-indicator="#upload-form">
             <div class="space-y-4">
                 <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Input Stream</h3>
                 <label class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors group">
-                    <input type="file" name="file" accept="image/png,image/jpeg,image/tiff" class="hidden" />
+                    <input type="file" name="file" accept="image/png,image/jpeg,image/tiff" class="hidden" onchange="this.form.requestSubmit()"/>
                     <div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         <span class="material-symbols-outlined text-primary">upload</span>
                     </div>
-                    <span class="font-headline font-bold text-on-surface">Upload a document image</span>
-                    <span class="font-label text-xs text-slate-400 mt-1 uppercase">PNG, JPG, TIFF</span>
+                    <span class="font-headline font-bold text-on-surface hide-on-request">Upload a document image</span>
+                    <span class="font-label text-xs text-slate-400 mt-1 uppercase hide-on-request">PNG, JPG, TIFF</span>
+                    <div class="htmx-indicator flex-col items-center gap-2">
+                        <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        <span class="font-label text-xs text-primary uppercase tracking-wider mt-2">Analyzing document...</span>
+                    </div>
                 </label>
             </div>
         </form>
@@ -121,7 +130,8 @@
                 {% for sample in samples | default([]) %}
                 <div class="bg-surface-container-lowest p-2 rounded-xl border border-transparent hover:border-primary cursor-pointer transition-all flex flex-col gap-2 group"
                      hx-post="/classify" hx-target="#results" hx-swap="innerHTML"
-                     hx-vals='{"sample": "{{ sample.filename }}"}'>
+                     hx-vals='{"sample": "{{ sample.filename }}"}'
+                     hx-indicator="#upload-form">
                     <img alt="{{ sample.label }} sample" class="w-full h-24 object-cover rounded-lg" src="/static/samples/{{ sample.filename }}"/>
                     <span class="font-label text-[10px] font-bold uppercase tracking-tighter px-1 text-slate-600 group-hover:text-primary">{{ sample.label }}</span>
                 </div>
@@ -133,6 +143,15 @@
                 {% endfor %}
             </div>
         </div>
+
+        {% if has_results and original_image_b64 %}
+        <div class="space-y-4">
+            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Current Document</h3>
+            <div class="bg-surface-container-lowest rounded-xl p-2">
+                <img alt="Uploaded document" class="w-full rounded-lg" src="data:image/png;base64,{{ original_image_b64 }}"/>
+            </div>
+        </div>
+        {% endif %}
         {% endblock upload_zone %}
 
         <div class="mt-auto pt-6 border-t border-slate-200/20">
@@ -150,6 +169,15 @@
     <div class="w-[65%] p-10 space-y-12 bg-surface">
         <div id="results">
             {% block results_section %}
+
+            {% if has_results %}
+
+            {% include "partials/cnn_features.html" %}
+            {% include "partials/graph_construction.html" %}
+            {% include "partials/model_predictions.html" %}
+            {% include "partials/detailed_analysis.html" %}
+
+            {% else %}
 
             <!-- Placeholder: shown before any classification -->
             <div class="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
@@ -178,10 +206,7 @@
                 </div>
             </div>
 
-            {% block cnn_features %}{% endblock cnn_features %}
-            {% block graph_construction %}{% endblock graph_construction %}
-            {% block model_predictions %}{% endblock model_predictions %}
-            {% block detailed_analysis %}{% endblock detailed_analysis %}
+            {% endif %}
 
             {% endblock results_section %}
         </div>
