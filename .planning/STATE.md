@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 ## Current Position
 
 Phase: 5 of 5 (Demo Application - Classification Page)
-Plan: 2 of TBD (completed: 01, 02)
+Plan: 4 of TBD (completed: 01, 02, 04)
 Status: In progress
-Last activity: 2026-04-07 — Completed 05-01-PLAN.md (promote model architectures to src/)
+Last activity: 2026-04-07 — Completed 05-04-PLAN.md (visualization service)
 
 Progress: [██████░░░░] ~55%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 7min
+- Total plans completed: 6
+- Average duration: 6min
 - Total execution time: 0.6 hours
 
 **By Phase:**
@@ -30,11 +30,11 @@ Progress: [██████░░░░] ~55%
 | 01-notebook-foundation-data-features | 1 | 12min | 12min |
 | 02.1-hybrid-fusion-positional-encoding | 2 | 6min | 3min |
 | 02.2-text-aware-hybrid-gnn | 1 | 7min | 7min |
-| 05-demo-application-classification-page | 2 | 12min | 6min |
+| 05-demo-application-classification-page | 3 | 13min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 12min, 4min, 7min, 4min, 8min
-- Trend: Stable ~7min
+- Last 5 plans: 4min, 7min, 4min, 8min, 1min
+- Trend: Stable ~5min
 
 *Updated after each plan completion*
 
@@ -65,6 +65,9 @@ Recent decisions affecting current work:
 - **[05-02]** Starlette 1.0 TemplateResponse uses keyword args (request=, name=) not positional
 - **[05-02]** Tailwind CDN with inline config for MD3 color tokens rather than build step
 - **[05-02]** HTMX form with hx-post for classify, targeting #results div
+- **[05-04]** matplotlib.use('Agg') at module top before any pyplot imports for server-safe rendering
+- **[05-04]** CSS grid with opacity mapping for text density/node importance (no matplotlib overhead)
+- **[05-04]** Inline SVG for graph topology (embeddable via Jinja2 safe filter)
 
 ### Pending Todos
 
@@ -76,8 +79,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-07 07:43 UTC
-Stopped at: 05-01-PLAN.md complete (9efe807)
+Last session: 2026-04-07 07:45 UTC
+Stopped at: 05-04-PLAN.md complete (45e8f1b)
 Resume file: None
 
 **Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the 02.1-02 human verification checkpoint. Phase 02.2-02 (notebook integration) is the next plan to execute.
