@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 ## Current Position
 
 Phase: 5 of 5 (Demo Application - Classification Page)
-Plan: 4 of TBD (completed: 01, 02, 04)
+Plan: 4 of TBD (completed: 01, 02, 03, 04)
 Status: In progress
-Last activity: 2026-04-07 — Completed 05-04-PLAN.md (visualization service)
+Last activity: 2026-04-07 — Completed 05-03-PLAN.md (model registry + inference pipeline)
 
 Progress: [██████░░░░] ~55%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 6min
-- Total execution time: 0.6 hours
+- Total execution time: 0.7 hours
 
 **By Phase:**
 
@@ -30,10 +30,10 @@ Progress: [██████░░░░] ~55%
 | 01-notebook-foundation-data-features | 1 | 12min | 12min |
 | 02.1-hybrid-fusion-positional-encoding | 2 | 6min | 3min |
 | 02.2-text-aware-hybrid-gnn | 1 | 7min | 7min |
-| 05-demo-application-classification-page | 3 | 13min | 4min |
+| 05-demo-application-classification-page | 4 | 19min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 7min, 4min, 8min, 1min
+- Last 5 plans: 7min, 4min, 8min, 1min, 6min
 - Trend: Stable ~5min
 
 *Updated after each plan completion*
@@ -65,6 +65,9 @@ Recent decisions affecting current work:
 - **[05-02]** Starlette 1.0 TemplateResponse uses keyword args (request=, name=) not positional
 - **[05-02]** Tailwind CDN with inline config for MD3 color tokens rather than build step
 - **[05-02]** HTMX form with hx-post for classify, targeting #results div
+- **[05-03]** needs_pe flag on ModelSpec to distinguish raw CNN (2048) vs PE-augmented (2050) node features
+- **[05-03]** Feature extractor built from fine-tuned checkpoint, not pretrained ImageNet weights
+- **[05-03]** OCR-dependent models return placeholder result when tesseract unavailable
 - **[05-04]** matplotlib.use('Agg') at module top before any pyplot imports for server-safe rendering
 - **[05-04]** CSS grid with opacity mapping for text density/node importance (no matplotlib overhead)
 - **[05-04]** Inline SVG for graph topology (embeddable via Jinja2 safe filter)
@@ -79,8 +82,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-07 07:45 UTC
-Stopped at: 05-04-PLAN.md complete (45e8f1b)
+Last session: 2026-04-07 07:50 UTC
+Stopped at: 05-03-PLAN.md complete (82a9450)
 Resume file: None
 
 **Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the 02.1-02 human verification checkpoint. Phase 02.2-02 (notebook integration) is the next plan to execute.
