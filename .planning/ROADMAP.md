@@ -119,10 +119,33 @@ Plans:
 Plans:
 - [ ] TBD after planning
 
+### Phase 5: Demo Application - Classification Page
+**Goal**: Build a FastAPI web application (Page 1: Classification Demo) that lets a presenter upload/select a document image and see CNN feature extraction, graph construction visualization, and side-by-side model predictions in real-time
+**Depends on**: Trained model checkpoints (already exist), src/ pipeline modules (features.py, graph.py, model.py, ocr_features.py)
+**Requirements**: DEP-01, DEP-03, DEP-04, DEP-05, DEP-06
+**Stack**: FastAPI + Jinja2 + HTMX + Alpine.js + Tailwind CSS (MD3 tokens). Code under app/src/, tests under app/tests/
+**Success Criteria** (what must be TRUE):
+  1. FastAPI app serves the classification demo page at localhost with Stitch-derived UI
+  2. Presenter can upload a custom image or click one of 5 preloaded sample documents
+  3. CNN feature extraction runs and displays activation heatmap + text density map
+  4. Graph construction runs and displays side-by-side grid vs k-NN graph visualizations with stats
+  5. All available model checkpoints run inference and populate a comparison table sorted by confidence
+  6. Detailed model analysis accordion expands per-model with 16-class probability distribution and node importance heatmap
+  7. Full pipeline completes in under 10 seconds on presenter's laptop
+**Plans**: 6 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Promote missing model classes + graph functions to src/
+- [ ] 05-02-PLAN.md — Install web deps + FastAPI app scaffolding
+- [ ] 05-03-PLAN.md — Model registry + inference pipeline
+- [ ] 05-04-PLAN.md — Visualization service (heatmaps, SVGs, charts)
+- [ ] 05-05-PLAN.md — Templates + routes + HTMX wiring
+- [ ] 05-06-PLAN.md — Sample images, route tests, end-to-end verification
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -132,3 +155,4 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4
 | 2.2. Text-Aware Hybrid GNN | 0/2 | Planning complete | - |
 | 3. Notebook Completion - Training & Evaluation | 0/TBD | Not started | - |
 | 4. Notebook Finalization - Ablation Studies | 0/TBD | Not started | - |
+| 5. Demo Application - Classification Page | 0/6 | Planning complete | - |
