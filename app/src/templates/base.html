@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Document Classification: CNN vs GNN Approaches</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#191c1d",
+                        "tertiary-container": "#795300",
+                        "on-primary-container": "#cacfff",
+                        "on-surface-variant": "#454652",
+                        "inverse-surface": "#2e3132",
+                        "tertiary-fixed-dim": "#ffba38",
+                        "background": "#f8f9fa",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-dim": "#d9dadb",
+                        "on-secondary-fixed-variant": "#354a53",
+                        "inverse-primary": "#bac3ff",
+                        "surface": "#f8f9fa",
+                        "on-primary-fixed-variant": "#293ca0",
+                        "tertiary-fixed": "#ffdeac",
+                        "primary-fixed": "#dee0ff",
+                        "surface-container-low": "#f3f4f5",
+                        "primary-fixed-dim": "#bac3ff",
+                        "on-tertiary-fixed-variant": "#604100",
+                        "surface-container": "#edeeef",
+                        "surface-container-high": "#e7e8e9",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#cfe6f2",
+                        "tertiary": "#5b3d00",
+                        "primary-container": "#3f51b5",
+                        "outline": "#757684",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-tertiary-fixed": "#281900",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#b4cad6",
+                        "secondary": "#4c616c",
+                        "on-surface": "#191c1d",
+                        "surface-tint": "#4355b9",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#f8f9fa",
+                        "on-tertiary-container": "#ffc971",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f0f1f2",
+                        "secondary-fixed": "#cfe6f2",
+                        "on-primary-fixed": "#00105c",
+                        "on-secondary-fixed": "#071e27",
+                        "surface-variant": "#e1e3e4",
+                        "primary": "#24389c",
+                        "outline-variant": "#c5c5d4",
+                        "on-secondary-container": "#526772"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    }
+                },
+            },
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/app.css"/>
+    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-fixed">
+
+<!-- Top Bar -->
+<header class="flex justify-between items-center w-full px-6 h-16 sticky top-0 z-50 bg-white/80 backdrop-blur-md bg-slate-50">
+    <div class="flex flex-col border-l-4 border-primary pl-4">
+        <h1 class="text-lg font-bold tracking-tight text-indigo-900 font-headline">Document Classification: CNN vs GNN Approaches</h1>
+        <p class="text-xs font-body text-slate-500">61.502 Deep Learning for Enterprise — <span class="font-bold text-primary">Group 1</span></p>
+    </div>
+    <div class="flex items-center gap-6">
+        <div id="status-badge" class="flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-full">
+            <span class="material-symbols-outlined text-outline scale-75">hourglass_empty</span>
+            <span class="font-label text-xs uppercase tracking-wider text-outline font-bold">Ready</span>
+        </div>
+    </div>
+</header>
+
+<main class="flex min-h-screen">
+
+    <!-- Left Panel: Sidebar -->
+    <aside class="h-screen w-[35%] sticky left-0 top-16 bg-slate-50 flex flex-col p-8 space-y-8 border-r border-slate-200/10 overflow-y-auto">
+        {% block upload_zone %}
+        <form id="upload-form" hx-post="/classify" hx-target="#results" hx-swap="innerHTML" hx-encoding="multipart/form-data">
+            <div class="space-y-4">
+                <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Input Stream</h3>
+                <label class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors group">
+                    <input type="file" name="file" accept="image/png,image/jpeg,image/tiff" class="hidden" />
+                    <div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-primary">upload</span>
+                    </div>
+                    <span class="font-headline font-bold text-on-surface">Upload a document image</span>
+                    <span class="font-label text-xs text-slate-400 mt-1 uppercase">PNG, JPG, TIFF</span>
+                </label>
+            </div>
+        </form>
+
+        <div class="space-y-4">
+            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Or try a sample</h3>
+            <div class="grid grid-cols-2 gap-3">
+                {% for sample in samples | default([]) %}
+                <div class="bg-surface-container-lowest p-2 rounded-xl border border-transparent hover:border-primary cursor-pointer transition-all flex flex-col gap-2 group"
+                     hx-post="/classify" hx-target="#results" hx-swap="innerHTML"
+                     hx-vals='{"sample": "{{ sample.filename }}"}'>
+                    <img alt="{{ sample.label }} sample" class="w-full h-24 object-cover rounded-lg" src="/static/samples/{{ sample.filename }}"/>
+                    <span class="font-label text-[10px] font-bold uppercase tracking-tighter px-1 text-slate-600 group-hover:text-primary">{{ sample.label }}</span>
+                </div>
+                {% else %}
+                <div class="col-span-2 text-center py-8 text-slate-400">
+                    <span class="material-symbols-outlined text-3xl mb-2 block">image</span>
+                    <span class="font-label text-xs uppercase">No samples available</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endblock upload_zone %}
+
+        <div class="mt-auto pt-6 border-t border-slate-200/20">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">DL</div>
+                <div>
+                    <p class="font-headline font-bold text-sm text-on-surface">RVL-CDIP Dataset</p>
+                    <p class="font-label text-[10px] uppercase text-slate-500 tracking-wider">16 document classes • Enterprise Research</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Right Panel: Scrollable Content -->
+    <div class="w-[65%] p-10 space-y-12 bg-surface">
+        <div id="results">
+            {% block results_section %}
+
+            <!-- Placeholder: shown before any classification -->
+            <div class="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
+                <div class="w-20 h-20 rounded-full bg-surface-container-low flex items-center justify-center">
+                    <span class="material-symbols-outlined text-4xl text-outline">document_scanner</span>
+                </div>
+                <div class="space-y-2">
+                    <h2 class="font-headline font-extrabold text-2xl text-on-surface">Upload a document to begin</h2>
+                    <p class="font-body text-sm text-slate-500 max-w-md">
+                        Select an image or drag and drop a scanned document. The pipeline will extract CNN features, construct a spatial graph, and run all models for comparison.
+                    </p>
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-full">
+                        <span class="material-symbols-outlined text-sm text-secondary">image</span>
+                        <span class="font-label text-[10px] uppercase tracking-wider text-slate-500">CNN Features</span>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-full">
+                        <span class="material-symbols-outlined text-sm text-secondary">hub</span>
+                        <span class="font-label text-[10px] uppercase tracking-wider text-slate-500">Graph Construction</span>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-full">
+                        <span class="material-symbols-outlined text-sm text-secondary">analytics</span>
+                        <span class="font-label text-[10px] uppercase tracking-wider text-slate-500">6 Models</span>
+                    </div>
+                </div>
+            </div>
+
+            {% block cnn_features %}{% endblock cnn_features %}
+            {% block graph_construction %}{% endblock graph_construction %}
+            {% block model_predictions %}{% endblock model_predictions %}
+            {% block detailed_analysis %}{% endblock detailed_analysis %}
+
+            {% endblock results_section %}
+        </div>
+    </div>
+
+</main>
+
+<!-- Footer -->
+<footer class="w-full h-12 bg-white flex items-center justify-center border-t border-slate-100">
+    <p class="font-label text-[10px] text-slate-400 uppercase tracking-widest">Deep Learning Experiment Environment v2.4.0 • Academic License: MIT</p>
+</footer>
+
+</body>
+</html>
