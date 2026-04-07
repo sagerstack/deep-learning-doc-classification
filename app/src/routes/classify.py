@@ -1,11 +1,115 @@
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+import logging
+from pathlib import Path
 
-from app.src.config import TEMPLATES_DIR
+from fastapi import APIRouter, Form, Request, UploadFile
+from fastapi.responses import HTMLResponse
+from jinja2_fragments.fastapi import Jinja2Blocks
+from PIL import Image
+import io
+
+from app.src.config import RVL_CDIP_LABELS, SAMPLES_DIR, TEMPLATES_DIR
+from app.src.services.inference import run_inference_pipeline
+from app.src.services.visualization import (
+    generate_16class_bar_chart,
+    generate_activation_heatmap,
+    generate_graph_svg,
+    generate_node_importance_html,
+    generate_original_image_base64,
+    generate_probability_bars_html,
+    generate_text_density_html,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = Jinja2Blocks(directory=str(TEMPLATES_DIR))
+
+SAMPLE_LABELS = {
+    "sample_invoice.jpg": "Invoice",
+    "sample_letter.jpg": "Letter",
+    "sample_form.jpg": "Form",
+    "sample_email.jpg": "Email",
+    "sample_resume.jpg": "Resume",
+    "sample_memo.jpg": "Memo",
+}
+
+
+def _load_sample_list() -> list[dict]:
+    if not SAMPLES_DIR.exists():
+        return []
+    samples = []
+    for path in sorted(SAMPLES_DIR.iterdir()):
+        if path.suffix.lower() in (".jpg", ".jpeg", ".png", ".tiff"):
+            label = SAMPLE_LABELS.get(path.name, path.stem.replace("_", " ").title())
+            samples.append({"filename": path.name, "label": label})
+    return samples
+
+
+def _load_image_from_upload(file: UploadFile) -> Image.Image:
+    contents = file.file.read()
+    return Image.open(io.BytesIO(contents)).convert("RGB")
+
+
+def _load_image_from_sample(sample_name: str) -> Image.Image:
+    sample_path = SAMPLES_DIR / sample_name
+    if not sample_path.exists():
+        raise FileNotFoundError(f"Sample not found: {sample_name}")
+    return Image.open(sample_path).convert("RGB")
+
+
+def _build_result_context(request: Request, image: Image.Image) -> dict:
+    registry = request.app.state.registry
+    device = request.app.state.device
+
+    pipeline = run_inference_pipeline(image, registry, device)
+
+    original_b64 = generate_original_image_base64(image)
+    heatmap_b64 = generate_activation_heatmap(pipeline.layer4_features, image)
+    text_density_html = generate_text_density_html(pipeline.text_density)
+    grid_svg = generate_graph_svg(pipeline.grid_edge_index)
+    knn_svg = generate_graph_svg(pipeline.knn_edge_index, edge_color="#24389c", node_color="#24389c")
+
+    best_result = pipeline.results[0] if pipeline.results else None
+    top3_bars_html = ""
+    if best_result:
+        top3_bars_html = generate_probability_bars_html(
+            best_result.probabilities, RVL_CDIP_LABELS, top_n=3
+        )
+
+    model_details = []
+    for r in pipeline.results:
+        bar_chart_b64 = generate_16class_bar_chart(
+            r.probabilities, RVL_CDIP_LABELS, r.predicted_index
+        )
+        prob_bars_html = generate_probability_bars_html(
+            r.probabilities, RVL_CDIP_LABELS, top_n=3
+        )
+        node_importance = generate_node_importance_html(None)
+        model_details.append({
+            "result": r,
+            "bar_chart_b64": bar_chart_b64,
+            "probability_bars_html": prob_bars_html,
+            "node_importance_html": node_importance,
+        })
+
+    return {
+        "request": request,
+        "has_results": True,
+        "original_image_b64": original_b64,
+        "heatmap_b64": heatmap_b64,
+        "text_density_html": text_density_html,
+        "grid_svg": grid_svg,
+        "knn_svg": knn_svg,
+        "graph_stats": pipeline.graph_stats,
+        "results": pipeline.results,
+        "labels": RVL_CDIP_LABELS,
+        "model_details": model_details,
+        "top3_bars_html": top3_bars_html,
+        "total_time_ms": pipeline.total_time_ms,
+        "feature_time_ms": pipeline.feature_extraction_time_ms,
+        "graph_time_ms": pipeline.graph_construction_time_ms,
+        "samples": _load_sample_list(),
+    }
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -13,12 +117,44 @@ async def index(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="base.html",
+        context={
+            "request": request,
+            "has_results": False,
+            "samples": _load_sample_list(),
+        },
     )
 
 
 @router.post("/classify")
-async def classify(request: Request):
-    return JSONResponse(
-        status_code=501,
-        content={"detail": "Not implemented — inference added in plan 05"},
+async def classify(
+    request: Request,
+    file: UploadFile | None = None,
+    sample: str | None = Form(default=None),
+):
+    if sample:
+        image = _load_image_from_sample(sample)
+    elif file and file.filename:
+        image = _load_image_from_upload(file)
+    else:
+        return HTMLResponse(
+            content='<div class="text-error font-label text-sm p-4">No image provided. Upload a file or select a sample.</div>',
+            status_code=400,
+        )
+
+    context = _build_result_context(request, image)
+
+    is_htmx = request.headers.get("HX-Request") == "true"
+
+    if is_htmx:
+        return templates.TemplateResponse(
+            request=request,
+            name="base.html",
+            context=context,
+            block_name="results_section",
+        )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="base.html",
+        context=context,
     )
