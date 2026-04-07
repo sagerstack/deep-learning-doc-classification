@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 ## Current Position
 
 Phase: 5 of 5 (Demo Application - Classification Page)
-Plan: 4 of TBD (completed: 01, 02, 03, 04)
+Plan: 5 of 6 (completed: 01, 02, 03, 04, 05)
 Status: In progress
-Last activity: 2026-04-07 — Completed 05-03-PLAN.md (model registry + inference pipeline)
+Last activity: 2026-04-07 — Completed 05-05-PLAN.md (classification page wiring)
 
-Progress: [██████░░░░] ~55%
+Progress: [████████░░] ~80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 6min
-- Total execution time: 0.7 hours
+- Total execution time: 0.8 hours
 
 **By Phase:**
 
@@ -30,7 +30,7 @@ Progress: [██████░░░░] ~55%
 | 01-notebook-foundation-data-features | 1 | 12min | 12min |
 | 02.1-hybrid-fusion-positional-encoding | 2 | 6min | 3min |
 | 02.2-text-aware-hybrid-gnn | 1 | 7min | 7min |
-| 05-demo-application-classification-page | 4 | 19min | 5min |
+| 05-demo-application-classification-page | 5 | 24min | 5min |
 
 **Recent Trend:**
 - Last 5 plans: 7min, 4min, 8min, 1min, 6min
@@ -71,6 +71,9 @@ Recent decisions affecting current work:
 - **[05-04]** matplotlib.use('Agg') at module top before any pyplot imports for server-safe rendering
 - **[05-04]** CSS grid with opacity mapping for text density/node importance (no matplotlib overhead)
 - **[05-04]** Inline SVG for graph topology (embeddable via Jinja2 safe filter)
+- **[05-05]** jinja2-fragments Jinja2Blocks for block_name HTMX partial rendering
+- **[05-05]** Template split into 4 include partials for maintainability
+- **[05-05]** Device detection in main.py lifespan (MPS -> CUDA -> CPU) independent of src.config.Config
 
 ### Pending Todos
 
@@ -82,8 +85,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-07 07:50 UTC
-Stopped at: 05-03-PLAN.md complete (82a9450)
+Last session: 2026-04-07 07:54 UTC
+Stopped at: 05-05-PLAN.md complete (ff7de50)
 Resume file: None
 
 **Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the 02.1-02 human verification checkpoint. Phase 02.2-02 (notebook integration) is the next plan to execute.
