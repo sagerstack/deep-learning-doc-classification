@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The GraphSAGE model must demonstrate whether graph-based spatial reasoning improves document classification over CNN-only baselines — with clear, reproducible evidence.
-**Current focus:** Phase 2.2 - Text-Aware Hybrid GNN
+**Current focus:** Phase 5 - Demo Application - Classification Page
 
 ## Current Position
 
-Phase: 2.2 of 4 (Text-Aware Hybrid GNN)
-Plan: 1 of TBD (completed)
+Phase: 5 of 5 (Demo Application - Classification Page)
+Plan: 2 of TBD (completed)
 Status: In progress
-Last activity: 2026-03-30 — Completed 02.2-01-PLAN.md (text density extraction + text-aware graph + TextAwareGraphSAGE)
+Last activity: 2026-04-07 — Completed 05-02-PLAN.md (FastAPI app scaffolding)
 
-Progress: [█████░░░░░] ~45%
+Progress: [██████░░░░] ~55%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 8min
-- Total execution time: 0.4 hours
+- Total plans completed: 4
+- Average duration: 7min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
@@ -30,9 +30,10 @@ Progress: [█████░░░░░] ~45%
 | 01-notebook-foundation-data-features | 1 | 12min | 12min |
 | 02.1-hybrid-fusion-positional-encoding | 2 | 6min | 3min |
 | 02.2-text-aware-hybrid-gnn | 1 | 7min | 7min |
+| 05-demo-application-classification-page | 1 | 4min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 12min, 4min, 7min
+- Last 5 plans: 12min, 4min, 7min, 4min
 - Trend: Stable ~7min
 
 *Updated after each plan completion*
@@ -58,6 +59,9 @@ Recent decisions affecting current work:
 - **[02.2-01]** Raw DBNet probability map (return_model_output=True) over bounding-box reconstruction for text density
 - **[02.2-01]** MPS falls back to CPU for doctr inference (doctr lacks MPS support)
 - **[02.2-01]** TextAwareGraphSAGE as independent class (not subclass of HybridGraphSAGE) for independent evolution
+- **[05-02]** Starlette 1.0 TemplateResponse uses keyword args (request=, name=) not positional
+- **[05-02]** Tailwind CDN with inline config for MD3 color tokens rather than build step
+- **[05-02]** HTMX form with hx-post for classify, targeting #results div
 
 ### Pending Todos
 
@@ -69,8 +73,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-30 14:31 UTC
-Stopped at: 02.2-01-PLAN.md complete (1e31ebb)
+Last session: 2026-04-07 07:38 UTC
+Stopped at: 05-02-PLAN.md complete (30c511d)
 Resume file: None
 
 **Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the 02.1-02 human verification checkpoint. Phase 02.2-02 (notebook integration) is the next plan to execute.
