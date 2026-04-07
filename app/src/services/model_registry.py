@@ -29,6 +29,7 @@ class ModelSpec:
     checkpoint_path: str = ""
     graph_type: str = "none"  # "none" | "feature_knn" | "gated_boc"
     needs_global_feat: bool = False
+    needs_pe: bool = False
     needs_boc: bool = False
     needs_text_density: bool = False
 
@@ -71,6 +72,7 @@ MODEL_SPECS = [
         checkpoint_path="models/exp25_boc_sage.pt",
         graph_type="feature_knn",
         needs_global_feat=True,
+        needs_pe=True,
         needs_boc=True,
     ),
     ModelSpec(
@@ -82,6 +84,7 @@ MODEL_SPECS = [
         checkpoint_path="models/exp26_gated_boc.pt",
         graph_type="gated_boc",
         needs_global_feat=True,
+        needs_pe=True,
         needs_boc=True,
     ),
     ModelSpec(
@@ -93,6 +96,7 @@ MODEL_SPECS = [
         checkpoint_path="models/exp27_attn_pool.pt",
         graph_type="feature_knn",
         needs_global_feat=True,
+        needs_pe=True,
     ),
 ]
 
