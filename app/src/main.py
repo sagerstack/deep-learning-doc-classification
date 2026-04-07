@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 
@@ -15,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 def _detect_device() -> torch.device:
+    if os.environ.get("FORCE_CPU"):
+        return torch.device("cpu")
     if torch.backends.mps.is_available():
         return torch.device("mps")
     if torch.cuda.is_available():

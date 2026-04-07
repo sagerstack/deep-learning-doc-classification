@@ -35,3 +35,10 @@ build-backend = "poetry.core.masonry.api"
 pytest = "^9.0.2"
 httpx = "^0.28.1"
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["app/tests"]
+markers = [
+    "slow: marks tests that require model loading (deselect with '-m \"not slow\"')",
+]
+

@@ -132,7 +132,13 @@ async def classify(
     sample: str | None = Form(default=None),
 ):
     if sample:
-        image = _load_image_from_sample(sample)
+        try:
+            image = _load_image_from_sample(sample)
+        except FileNotFoundError:
+            return HTMLResponse(
+                content='<div class="text-error font-label text-sm p-4">Sample not found. Please select a valid sample.</div>',
+                status_code=404,
+            )
     elif file and file.filename:
         image = _load_image_from_upload(file)
     else:
