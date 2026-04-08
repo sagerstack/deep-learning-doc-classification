@@ -7,6 +7,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from PIL import Image
 
@@ -112,6 +113,59 @@ def generate_graph_svg(
         + "".join(circles)
         + "</svg>"
     )
+
+
+def generate_graph_overlay(
+    original_image: Image.Image,
+    edge_index: torch.Tensor,
+    grid_h: int = 7,
+    grid_w: int = 7,
+    edge_color: str = "#2563eb",
+    node_color: str = "#24389c",
+    title: str = "",
+) -> str:
+    """Overlay graph edges and nodes on the actual document image (GVdoc style)."""
+    img = original_image.resize((224, 224), Image.LANCZOS).convert("RGB")
+    img_array = np.array(img)
+
+    num_nodes = grid_h * grid_w
+    cell_h = 224 / grid_h
+    cell_w = 224 / grid_w
+
+    # Node positions at grid cell centers
+    positions = []
+    for row in range(grid_h):
+        for col in range(grid_w):
+            cx = (col + 0.5) * cell_w
+            cy = (row + 0.5) * cell_h
+            positions.append((cx, cy))
+
+    edges_cpu = edge_index.detach().cpu()
+    src_nodes = edges_cpu[0].tolist()
+    dst_nodes = edges_cpu[1].tolist()
+
+    fig, ax = plt.subplots(figsize=(3, 3), dpi=100)
+    ax.imshow(img_array)
+
+    # Draw edges
+    for s, d in zip(src_nodes, dst_nodes):
+        if 0 <= s < num_nodes and 0 <= d < num_nodes:
+            x1, y1 = positions[s]
+            x2, y2 = positions[d]
+            ax.plot([x1, x2], [y1, y2], color=edge_color, linewidth=0.5, alpha=0.4)
+
+    # Draw nodes
+    xs = [p[0] for p in positions]
+    ys = [p[1] for p in positions]
+    ax.scatter(xs, ys, c=node_color, s=8, zorder=5, edgecolors="white", linewidths=0.3)
+
+    if title:
+        ax.set_title(title, fontsize=8, fontweight="bold", pad=4)
+
+    ax.set_axis_off()
+    fig.patch.set_alpha(0.0)
+    fig.subplots_adjust(left=0, right=1, top=0.93 if title else 1, bottom=0)
+    return fig_to_base64(fig)
 
 
 def generate_probability_bars_html(

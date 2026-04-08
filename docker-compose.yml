@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.local
+    environment:
+      - FORCE_DEVICE=cpu
+      - MODEL_DIR=/app/models
+    ports:
+      - "${APP_PORT:-9000}:${APP_PORT:-9000}"
+    volumes:
+      - ./models:/app/models:ro
+    restart: unless-stopped
+    command: ["python", "-m", "uvicorn", "app.src.main:app", "--host", "0.0.0.0", "--port", "${APP_PORT:-9000}"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; import urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"APP_PORT\", \"9000\")}/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s

@@ -50,8 +50,12 @@
 
 ### Deployment
 
-- **DEP-01**: Streamlit or FastAPI demo for document classification inference
+- **DEP-01**: FastAPI web app serving classification demo via Jinja2 + HTMX + Alpine.js + Tailwind CSS
 - **DEP-02**: Model weights hosted on Google Drive/Dropbox
+- **DEP-03**: Upload custom image or select from preloaded sample documents (5 samples from RVL-CDIP)
+- **DEP-04**: Live CNN feature extraction with activation heatmap and OCR text density visualization
+- **DEP-05**: Live graph construction with side-by-side grid vs k-NN graph visualization and stats
+- **DEP-06**: Multi-model inference comparison table with per-model detailed analysis accordion
 
 ## Out of Scope
 
@@ -88,10 +92,15 @@
 | ABL-02 | Phase 4 | Pending |
 | ABL-03 | Phase 4 | Pending |
 | ABL-04 | Phase 4 | Pending |
+| DEP-01 | Phase 5 | Pending |
+| DEP-03 | Phase 5 | Pending |
+| DEP-04 | Phase 5 | Pending |
+| DEP-05 | Phase 5 | Pending |
+| DEP-06 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 20 total
-- Mapped to phases: 20
+- v1 requirements: 24 total
+- Mapped to phases: 24
 - Unmapped: 0
 
 ---

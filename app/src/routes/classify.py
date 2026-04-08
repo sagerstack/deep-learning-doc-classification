@@ -12,6 +12,7 @@ from app.src.services.inference import run_inference_pipeline
 from app.src.services.visualization import (
     generate_16class_bar_chart,
     generate_activation_heatmap,
+    generate_graph_overlay,
     generate_graph_svg,
     generate_node_importance_html,
     generate_original_image_base64,
@@ -24,25 +25,33 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Blocks(directory=str(TEMPLATES_DIR))
 
-SAMPLE_LABELS = {
-    "sample_invoice.jpg": "Invoice",
-    "sample_letter.jpg": "Letter",
-    "sample_form.jpg": "Form",
-    "sample_email.jpg": "Email",
-    "sample_resume.jpg": "Resume",
-    "sample_memo.jpg": "Memo",
+SAMPLE_CATEGORIES = {
+    "in-dist": "In-Distribution (RVL-CDIP)",
+    "ood": "Out-of-Distribution (RVL-CDIP-N)",
 }
 
 
-def _load_sample_list() -> list[dict]:
-    if not SAMPLES_DIR.exists():
-        return []
-    samples = []
-    for path in sorted(SAMPLES_DIR.iterdir()):
-        if path.suffix.lower() in (".jpg", ".jpeg", ".png", ".tiff"):
-            label = SAMPLE_LABELS.get(path.name, path.stem.replace("_", " ").title())
-            samples.append({"filename": path.name, "label": label})
-    return samples
+def _load_sample_categories() -> list[dict]:
+    categories = []
+    for folder, display_name in SAMPLE_CATEGORIES.items():
+        folder_path = SAMPLES_DIR / folder
+        if not folder_path.exists():
+            continue
+        samples = []
+        for path in sorted(folder_path.iterdir()):
+            if path.suffix.lower() in (".jpg", ".jpeg", ".png", ".tiff"):
+                label = path.stem.replace("_", " ").title()
+                samples.append({
+                    "filename": f"{folder}/{path.name}",
+                    "label": label,
+                })
+        if samples:
+            categories.append({
+                "key": folder,
+                "name": display_name,
+                "samples": samples,
+            })
+    return categories
 
 
 def _load_image_from_upload(file: UploadFile) -> Image.Image:
@@ -68,6 +77,12 @@ def _build_result_context(request: Request, image: Image.Image) -> dict:
     text_density_html = generate_text_density_html(pipeline.text_density)
     grid_svg = generate_graph_svg(pipeline.grid_edge_index)
     knn_svg = generate_graph_svg(pipeline.knn_edge_index, edge_color="#24389c", node_color="#24389c")
+    grid_overlay_b64 = generate_graph_overlay(
+        image, pipeline.grid_edge_index, title="Spatial Grid (k=8)", edge_color="#2563eb",
+    )
+    knn_overlay_b64 = generate_graph_overlay(
+        image, pipeline.knn_edge_index, title="Feature k-NN (k=8)", edge_color="#dc2626",
+    )
 
     best_result = pipeline.results[0] if pipeline.results else None
     top3_bars_html = ""
@@ -100,6 +115,8 @@ def _build_result_context(request: Request, image: Image.Image) -> dict:
         "text_density_html": text_density_html,
         "grid_svg": grid_svg,
         "knn_svg": knn_svg,
+        "grid_overlay_b64": grid_overlay_b64,
+        "knn_overlay_b64": knn_overlay_b64,
         "graph_stats": pipeline.graph_stats,
         "results": pipeline.results,
         "labels": RVL_CDIP_LABELS,
@@ -108,7 +125,7 @@ def _build_result_context(request: Request, image: Image.Image) -> dict:
         "total_time_ms": pipeline.total_time_ms,
         "feature_time_ms": pipeline.feature_extraction_time_ms,
         "graph_time_ms": pipeline.graph_construction_time_ms,
-        "samples": _load_sample_list(),
+        "sample_categories": _load_sample_categories(),
     }
 
 
@@ -120,7 +137,7 @@ async def index(request: Request):
         context={
             "request": request,
             "has_results": False,
-            "samples": _load_sample_list(),
+            "sample_categories": _load_sample_categories(),
         },
     )
 

@@ -9,7 +9,7 @@ import torch.nn as nn
 from torchvision.models import resnet50, ResNet50_Weights
 from torchvision.models.feature_extraction import create_feature_extractor
 
-from app.src.config import PROJECT_ROOT
+from app.src.config import MODEL_DIR
 from src.model import (
     AttentionPoolFusionSAGE,
     FusionGAT,
@@ -40,7 +40,7 @@ MODEL_SPECS = [
         display_name="CNN Baseline (ResNet-50)",
         model_type="CNN",
         model_class=None,
-        checkpoint_path="models/exp14b_finetuned_resnet50_cnn.pt",
+        checkpoint_path="exp14b_finetuned_resnet50_cnn.pt",
         graph_type="none",
     ),
     ModelSpec(
@@ -49,7 +49,7 @@ MODEL_SPECS = [
         model_type="GNN",
         model_class=FusionGraphSAGE,
         constructor_kwargs={"in_channels": 2048},
-        checkpoint_path="models/exp16_fusion_featknn_graphsage.pt",
+        checkpoint_path="exp16_fusion_featknn_graphsage.pt",
         graph_type="feature_knn",
         needs_global_feat=True,
     ),
@@ -59,7 +59,7 @@ MODEL_SPECS = [
         model_type="GNN",
         model_class=FusionGAT,
         constructor_kwargs={"in_channels": 2048},
-        checkpoint_path="models/exp23_gat_fusion.pt",
+        checkpoint_path="exp23_gat_fusion.pt",
         graph_type="feature_knn",
         needs_global_feat=True,
     ),
@@ -69,7 +69,7 @@ MODEL_SPECS = [
         model_type="GNN+OCR",
         model_class=HybridGraphSAGE,
         constructor_kwargs={"node_dim": 2120},
-        checkpoint_path="models/exp25_boc_sage.pt",
+        checkpoint_path="exp25_boc_sage.pt",
         graph_type="feature_knn",
         needs_global_feat=True,
         needs_pe=True,
@@ -81,7 +81,7 @@ MODEL_SPECS = [
         model_type="GNN+OCR",
         model_class=GatedBoCGraphSAGE,
         constructor_kwargs={"cnn_dim": 2050, "boc_dim": 70, "proj_dim": 16},
-        checkpoint_path="models/exp26_gated_boc.pt",
+        checkpoint_path="exp26_gated_boc.pt",
         graph_type="gated_boc",
         needs_global_feat=True,
         needs_pe=True,
@@ -93,7 +93,7 @@ MODEL_SPECS = [
         model_type="GNN",
         model_class=AttentionPoolFusionSAGE,
         constructor_kwargs={},
-        checkpoint_path="models/exp27_attn_pool.pt",
+        checkpoint_path="exp27_attn_pool.pt",
         graph_type="feature_knn",
         needs_global_feat=True,
         needs_pe=True,
@@ -122,7 +122,7 @@ def load_all_models(device: torch.device) -> dict:
         }
     """
     # Load CNN baseline checkpoint (ResNet-50 with fc head)
-    cnn_checkpoint_path = PROJECT_ROOT / "models" / "exp14b_finetuned_resnet50_cnn.pt"
+    cnn_checkpoint_path = MODEL_DIR / "exp14b_finetuned_resnet50_cnn.pt"
     checkpoint = torch.load(cnn_checkpoint_path, map_location="cpu", weights_only=False)
     state_dict = _unwrap_resnet_checkpoint(checkpoint)
 
@@ -151,7 +151,7 @@ def load_all_models(device: torch.device) -> dict:
         if spec.model_class is None:
             continue  # CNN baseline handled above
 
-        ckpt_path = PROJECT_ROOT / spec.checkpoint_path
+        ckpt_path = MODEL_DIR / spec.checkpoint_path
         if not ckpt_path.exists():
             print(f"Warning: checkpoint not found for {spec.display_name}: {ckpt_path}")
             continue

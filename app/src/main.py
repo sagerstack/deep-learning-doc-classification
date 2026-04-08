@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 from contextlib import asynccontextmanager
 
@@ -8,16 +7,24 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.src.config import STATIC_DIR, TEMPLATES_DIR
+from app.src.config import (
+    APP_HOST,
+    APP_PORT,
+    CORS_ORIGINS,
+    FORCE_DEVICE,
+    LOG_LEVEL,
+    STATIC_DIR,
+)
 from app.src.routes.classify import router as classify_router
 from app.src.services.model_registry import load_all_models
 
+logging.basicConfig(level=getattr(logging, LOG_LEVEL.upper(), logging.INFO))
 logger = logging.getLogger(__name__)
 
 
 def _detect_device() -> torch.device:
-    if os.environ.get("FORCE_CPU"):
-        return torch.device("cpu")
+    if FORCE_DEVICE:
+        return torch.device(FORCE_DEVICE)
     if torch.backends.mps.is_available():
         return torch.device("mps")
     if torch.cuda.is_available():
@@ -58,7 +65,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 # Force CPU for tests to avoid MPS segfaults in torch_geometric kNN
-os.environ["FORCE_CPU"] = "1"
+os.environ["FORCE_DEVICE"] = "cpu"
 
 import pytest
 from fastapi.testclient import TestClient

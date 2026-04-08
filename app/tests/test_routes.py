@@ -33,7 +33,7 @@ class TestHomePage:
 
     def test_home_contains_sample_thumbnails(self, client):
         response = client.get("/")
-        assert "sample_invoice.jpg" in response.text
+        assert "in-dist/" in response.text
 
     def test_home_contains_upload_zone(self, client):
         response = client.get("/")
@@ -62,14 +62,14 @@ class TestClassifyWithSample:
     def test_classify_sample_returns_200(self, client):
         response = client.post(
             "/classify",
-            data={"sample": "sample_invoice.jpg"},
+            data={"sample": "in-dist/invoice.jpg"},
         )
         assert response.status_code == 200
 
     def test_classify_sample_contains_predictions(self, client):
         response = client.post(
             "/classify",
-            data={"sample": "sample_invoice.jpg"},
+            data={"sample": "in-dist/invoice.jpg"},
         )
         assert "Model Predictions" in response.text or "confidence" in response.text.lower()
 
@@ -88,7 +88,7 @@ class TestClassifyHTMX:
     def test_htmx_response_has_result_sections(self, client):
         response = client.post(
             "/classify",
-            data={"sample": "sample_letter.jpg"},
+            data={"sample": "in-dist/letter.jpg"},
             headers={"HX-Request": "true"},
         )
         assert response.status_code == 200

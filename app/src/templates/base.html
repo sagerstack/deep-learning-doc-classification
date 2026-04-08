@@ -83,6 +83,7 @@
         .htmx-indicator { display: none; }
         .htmx-request .htmx-indicator { display: flex; }
         .htmx-request .hide-on-request { display: none; }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 <body class="bg-surface text-on-surface selection:bg-primary-fixed">
@@ -124,10 +125,21 @@
             </div>
         </form>
 
-        <div class="space-y-4">
+        <div class="space-y-4" x-data="{ tab: 'in-dist' }">
             <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Or try a sample</h3>
-            <div class="grid grid-cols-2 gap-3">
-                {% for sample in samples | default([]) %}
+            {% if sample_categories | default([]) %}
+            <div class="flex gap-1 bg-surface-container-low rounded-lg p-1">
+                {% for cat in sample_categories %}
+                <button @click="tab = '{{ cat.key }}'"
+                        :class="tab === '{{ cat.key }}' ? 'bg-white shadow-sm text-primary font-bold' : 'text-slate-500 hover:text-slate-700'"
+                        class="flex-1 font-label text-[10px] uppercase tracking-wider px-2 py-2 rounded-md transition-all text-center">
+                    {{ cat.name }}
+                </button>
+                {% endfor %}
+            </div>
+            {% for cat in sample_categories %}
+            <div x-show="tab === '{{ cat.key }}'" x-cloak class="grid grid-cols-2 gap-3">
+                {% for sample in cat.samples %}
                 <div class="bg-surface-container-lowest p-2 rounded-xl border border-transparent hover:border-primary cursor-pointer transition-all flex flex-col gap-2 group"
                      hx-post="/classify" hx-target="#results" hx-swap="innerHTML"
                      hx-vals='{"sample": "{{ sample.filename }}"}'
@@ -135,13 +147,15 @@
                     <img alt="{{ sample.label }} sample" class="w-full h-24 object-cover rounded-lg" src="/static/samples/{{ sample.filename }}"/>
                     <span class="font-label text-[10px] font-bold uppercase tracking-tighter px-1 text-slate-600 group-hover:text-primary">{{ sample.label }}</span>
                 </div>
-                {% else %}
-                <div class="col-span-2 text-center py-8 text-slate-400">
-                    <span class="material-symbols-outlined text-3xl mb-2 block">image</span>
-                    <span class="font-label text-xs uppercase">No samples available</span>
-                </div>
                 {% endfor %}
             </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center py-8 text-slate-400">
+                <span class="material-symbols-outlined text-3xl mb-2 block">image</span>
+                <span class="font-label text-xs uppercase">No samples available</span>
+            </div>
+            {% endif %}
         </div>
 
         {% if has_results and original_image_b64 %}
