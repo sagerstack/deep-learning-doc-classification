@@ -156,11 +156,12 @@ Plans:
   4. Unlabeled monitoring captures class distribution drift, confidence shifts, latency drift, and OCR/text-density availability rates per model
   5. Labeled monitoring can be enabled later without changing the logging schema by adding target labels to the same event store
   6. Monitoring setup is documented and runnable locally through a script or scheduled job outside the FastAPI request path
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 - [x] 06-01-PLAN.md — Structured inference logging + dashboard route/sidebar link
 - [x] 06-02-PLAN.md — Evidently batch job + per-model reports + setup docs
+- [ ] 06-03-PLAN.md — Gap closure: top-nav repoint + thumbs-up/down label capture + target DDL regression tests
 
 ## Progress
 
@@ -176,4 +177,4 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5 -> 6
 | 3. Notebook Completion - Training & Evaluation | 0/TBD | Not started | - |
 | 4. Notebook Finalization - Ablation Studies | 0/TBD | Not started | - |
 | 5. Demo Application - Classification Page | 0/6 | Planning complete | - |
-| 6. Model Performance Monitoring | 2/2 | Complete | 2026-04-14 |
+| 6. Model Performance Monitoring | 2/3 | Gap closure planned | 2026-04-14 |
