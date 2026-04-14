@@ -113,8 +113,8 @@ def _build_result_context(
     pipeline = run_inference_pipeline(image, registry, device)
 
     # --- Monitoring: persist one row per model prediction ---
+    request_id = str(uuid.uuid4())
     try:
-        request_id = str(uuid.uuid4())
         timestamp = datetime.now(timezone.utc).isoformat()
         events = build_inference_events(
             request_id=request_id,
@@ -201,6 +201,7 @@ def _build_result_context(
     return {
         **_build_base_context(request),
         "has_results": True,
+        "request_id": request_id,
         "original_image_b64": original_b64,
         "heatmap_b64": heatmap_b64,
         "text_density_html": text_density_html,

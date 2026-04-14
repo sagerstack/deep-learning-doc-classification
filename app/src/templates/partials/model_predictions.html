@@ -33,11 +33,28 @@
                     <td class="px-6 py-4">{{ r.predicted_class }}</td>
                     <td class="px-6 py-4 font-label {% if loop.first %}font-bold text-primary{% else %}font-bold{% endif %}">{{ "%.1f"|format(r.confidence * 100) }}%</td>
                     <td class="px-6 py-4">
-                        {% if r.predicted_index >= 0 %}
-                        <span class="text-slate-300">-</span>
-                        {% else %}
-                        <span class="text-slate-300">-</span>
-                        {% endif %}
+                        <div class="flex gap-2">
+                            <button
+                                hx-post="/label"
+                                hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "true"}'
+                                hx-target="closest td"
+                                hx-swap="innerHTML"
+                                class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-green-100 transition-colors group"
+                                title="Mark as correct"
+                            >
+                                <span class="material-symbols-outlined text-slate-300 group-hover:text-green-600 text-xl">thumb_up</span>
+                            </button>
+                            <button
+                                hx-post="/label"
+                                hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "false"}'
+                                hx-target="closest td"
+                                hx-swap="innerHTML"
+                                class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-red-100 transition-colors group"
+                                title="Mark as incorrect"
+                            >
+                                <span class="material-symbols-outlined text-slate-300 group-hover:text-red-500 text-xl">thumb_down</span>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}

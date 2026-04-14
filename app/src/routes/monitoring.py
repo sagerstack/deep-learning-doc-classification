@@ -1,9 +1,14 @@
-"""Monitoring route: redirect to the configured Evidently dashboard URL."""
+"""Monitoring routes: redirect to Evidently dashboard and capture label feedback."""
 
-from fastapi import APIRouter
+import logging
+import sqlite3
+
+from fastapi import APIRouter, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.src.config import EVIDENTLY_DASHBOARD_URL
+from app.src.config import EVIDENTLY_DASHBOARD_URL, MONITORING_DB_PATH
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -31,6 +36,20 @@ _NOT_CONFIGURED_HTML = """
 </html>
 """
 
+_CONFIRM_CORRECT_HTML = """
+<div class="flex items-center gap-1.5 text-green-600">
+    <span class="material-symbols-outlined text-green-600 text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+    <span class="font-label text-xs font-bold uppercase tracking-wider">Recorded</span>
+</div>
+"""
+
+_CONFIRM_INCORRECT_HTML = """
+<div class="flex items-center gap-1.5 text-slate-400">
+    <span class="material-symbols-outlined text-slate-400 text-lg" style="font-variation-settings: 'FILL' 1;">cancel</span>
+    <span class="font-label text-xs font-bold uppercase tracking-wider">Noted</span>
+</div>
+"""
+
 
 @router.get("/model-performance")
 async def model_performance():
@@ -38,3 +57,39 @@ async def model_performance():
     if EVIDENTLY_DASHBOARD_URL:
         return RedirectResponse(url=EVIDENTLY_DASHBOARD_URL)
     return HTMLResponse(content=_NOT_CONFIGURED_HTML, status_code=200)
+
+
+@router.post("/label")
+async def label_prediction(
+    request_id: str = Form(...),
+    model_id: str = Form(...),
+    correct: str = Form(...),
+):
+    """Capture thumbs-up/down feedback and write target label to inference_events.
+
+    On correct=true: sets target = predicted_label for the matching row.
+    On correct=false: no DB write (target remains NULL).
+    Returns an HTML confirmation fragment to swap into the table cell.
+    """
+    if not request_id.strip() or not model_id.strip():
+        return HTMLResponse(
+            content='<span class="font-label text-xs text-red-400">Invalid input</span>',
+            status_code=400,
+        )
+
+    is_correct = correct.lower() in ("true", "1", "yes")
+
+    if is_correct:
+        try:
+            with sqlite3.connect(str(MONITORING_DB_PATH)) as conn:
+                conn.execute(
+                    "UPDATE inference_events SET target = predicted_label "
+                    "WHERE request_id = ? AND model_id = ?",
+                    (request_id, model_id),
+                )
+                conn.commit()
+        except sqlite3.Error as exc:
+            logger.warning("Label write failed (non-fatal): %s", exc)
+
+    confirmation = _CONFIRM_CORRECT_HTML if is_correct else _CONFIRM_INCORRECT_HTML
+    return HTMLResponse(content=confirmation, status_code=200)
