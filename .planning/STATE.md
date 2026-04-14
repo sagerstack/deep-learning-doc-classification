@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The GraphSAGE model must demonstrate whether graph-based spatial reasoning improves document classification over CNN-only baselines — with clear, reproducible evidence.
-**Current focus:** Phase 5 - Demo Application - Classification Page
+**Current focus:** Phase 6 - Model Performance Monitoring
 
 ## Current Position
 
-Phase: 5 of 5 (Demo Application - Classification Page)
-Plan: 5 of 6 (completed: 01, 02, 03, 04, 05)
+Phase: 6 of 6 (Model Performance Monitoring)
+Plan: 1 of 1 (completed: 01)
 Status: In progress
-Last activity: 2026-04-07 — Completed 05-05-PLAN.md (classification page wiring)
+Last activity: 2026-04-14 — Completed 06-01-PLAN.md (structured inference logging + dashboard route)
 
-Progress: [████████░░] ~80%
+Progress: [█████████░] ~90%
 
 ## Performance Metrics
 
@@ -74,6 +74,11 @@ Recent decisions affecting current work:
 - **[05-05]** jinja2-fragments Jinja2Blocks for block_name HTMX partial rendering
 - **[05-05]** Template split into 4 include partials for maintainability
 - **[05-05]** Device detection in main.py lifespan (MPS -> CUDA -> CPU) independent of src.config.Config
+- **[06-01]** sqlite3 stdlib only for monitoring store — no ORM dependency
+- **[06-01]** One row per model per request — enables per-model drift tracking independently
+- **[06-01]** Monitoring failure is non-fatal (try/except + warning log) — inference must not break on DB write failure
+- **[06-01]** EVIDENTLY_DASHBOARD_URL env var drives redirect; empty string triggers fallback HTML page
+- **[06-01]** sample_type column distinguishes "sample" vs "upload" for drift segmentation
 
 ### Pending Todos
 
@@ -85,8 +90,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-07 07:54 UTC
-Stopped at: 05-05-PLAN.md complete (ff7de50)
+Last session: 2026-04-14 01:25 UTC
+Stopped at: 06-01-PLAN.md complete (a6327fb)
 Resume file: None
 
-**Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the 02.1-02 human verification checkpoint. Phase 02.2-02 (notebook integration) is the next plan to execute.
+**Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the 02.1-02 human verification checkpoint. Phase 02.2-02 (notebook integration) is the next notebook plan to execute. A new planned Phase 6 covers Evidently-based model performance monitoring after the demo app is formally complete.
