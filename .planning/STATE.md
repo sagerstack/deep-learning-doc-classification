@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The GraphSAGE model must demonstrate whether graph-based spatial reasoning improves document classification over CNN-only baselines — with clear, reproducible evidence.
-**Current focus:** Phase 6 complete — milestone execution done
+**Current focus:** Phase 6 complete — all gaps closed
 
 ## Current Position
 
 Phase: 6 of 6 (Model Performance Monitoring)
-Plan: 2 of 2 (completed: 01, 02)
-Status: Phase complete
-Last activity: 2026-04-14 — Completed 06-02-PLAN.md (Evidently batch job + operator docs)
+Plan: 3 of 3 (completed: 01, 02, 03)
+Status: Phase complete (gap closure done)
+Last activity: 2026-04-14 — Completed 06-03-PLAN.md (gap closure: nav repoint + label feedback)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: 6min
-- Total execution time: 0.8 hours
+- Total execution time: 0.9 hours
 
 **By Phase:**
 
@@ -82,6 +82,9 @@ Recent decisions affecting current work:
 - **[06-02]** DataDriftPreset omitted when reference absent; DataSummaryPreset always runs
 - **[06-02]** Timestamp column must be converted to pd.datetime(utc=True) before passing to Evidently drift metrics
 - **[06-02]** Unlabeled report omits MulticlassClassification block; labeled report adds it only when target column present
+- **[06-03]** correct=true writes target=predicted_label; correct=false is no-op (NULL more honest than guessing true label)
+- **[06-03]** hx-vals uses string "true"/"false" not JSON boolean; route normalises via .lower() check
+- **[06-03]** request_id lifted before monitoring try/except to guarantee availability in template context
 
 ### Pending Todos
 
@@ -94,7 +97,7 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-04-14 UTC
-Stopped at: Phase 6 verified and complete (a18de29) — all milestone phases executed
+Stopped at: Completed 06-03-PLAN.md (gap closure) — 577eb4d
 Resume file: None
 
-**Milestone status:** Phases 5 and 6 (demo app + monitoring) fully executed. Phases 1–4 (notebook training pipeline) remain for academic submission. Next: /gsd:audit-milestone to review cross-phase integration.
+**Milestone status:** Phases 5 and 6 (demo app + monitoring) fully executed including gap closure. All UAT gaps closed: top-nav Drift Monitoring routes to /model-performance, thumbs-up/down feedback writes target to inference_events, DDL regression tests pass. Phases 1–4 (notebook training pipeline) remain for academic submission.
