@@ -135,38 +135,40 @@
     <aside class="h-screen w-[35%] sticky left-0 top-16 bg-slate-50 flex flex-col p-8 space-y-8 border-r border-slate-200/10 overflow-y-auto"
            x-data="{ selectedSrc: null, tab: 'in-dist' }">
         {% block upload_zone %}
+        <!-- Selected Image -->
+        <div class="space-y-3">
+            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Selected Image</h3>
+            <div x-show="selectedSrc" class="bg-surface-container-lowest rounded-xl p-1.5 h-[30rem] overflow-hidden border border-primary/20">
+                <img :src="selectedSrc" alt="Selected document" class="w-full h-full object-cover rounded-lg"/>
+            </div>
+            <div x-show="!selectedSrc" class="border-2 border-dashed border-outline-variant/30 bg-surface-container-lowest rounded-xl h-[30rem] flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined text-5xl text-outline/30">image</span>
+                <span class="font-label text-[10px] uppercase text-slate-300 mt-2">No selection</span>
+            </div>
+        </div>
+
+        <!-- Input Stream -->
         <div class="space-y-3">
             <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Input Stream</h3>
-            <div class="grid grid-cols-2 gap-3">
-                <!-- Upload -->
-                <form id="upload-form" hx-post="/classify" hx-target="#results" hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-indicator="#upload-form">
-                    <label class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl h-40 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors group">
-                        <input type="file" name="file" accept="image/png,image/jpeg,image/tiff" class="hidden"
-                               @change="
-                                   const f = $event.target.files[0];
-                                   if (f) { const r = new FileReader(); r.onload = e => selectedSrc = e.target.result; r.readAsDataURL(f); }
-                                   $event.target.closest('form').requestSubmit();
-                               "/>
-                        <div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center mb-2 group-hover:scale-110 transition-transform hide-on-request">
-                            <span class="material-symbols-outlined text-primary">upload</span>
-                        </div>
-                        <span class="font-headline font-bold text-xs text-on-surface hide-on-request">Upload</span>
-                        <span class="font-label text-[10px] text-slate-400 mt-0.5 uppercase hide-on-request">PNG · JPG · TIFF</span>
-                        <div class="htmx-indicator flex-col items-center gap-2">
-                            <div class="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                            <span class="font-label text-[10px] text-primary uppercase tracking-wider mt-2">Analyzing…</span>
-                        </div>
-                    </label>
-                </form>
-                <!-- Selected image (Alpine-driven) -->
-                <div x-show="selectedSrc" class="bg-surface-container-lowest rounded-xl p-1.5 h-40 overflow-hidden border border-primary/20">
-                    <img :src="selectedSrc" alt="Selected document" class="w-full h-full object-contain rounded-lg"/>
-                </div>
-                <div x-show="!selectedSrc" class="border-2 border-dashed border-outline-variant/30 bg-surface-container-lowest rounded-xl h-40 flex flex-col items-center justify-center">
-                    <span class="material-symbols-outlined text-3xl text-outline/30">image</span>
-                    <span class="font-label text-[10px] uppercase text-slate-300 mt-1">No selection</span>
-                </div>
-            </div>
+            <form id="upload-form" hx-post="/classify" hx-target="#results" hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-indicator="#upload-form">
+                <label class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl h-40 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors group">
+                    <input type="file" name="file" accept="image/png,image/jpeg,image/tiff" class="hidden"
+                           @change="
+                               const f = $event.target.files[0];
+                               if (f) { const r = new FileReader(); r.onload = e => selectedSrc = e.target.result; r.readAsDataURL(f); }
+                               $event.target.closest('form').requestSubmit();
+                           "/>
+                    <div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center mb-2 group-hover:scale-110 transition-transform hide-on-request">
+                        <span class="material-symbols-outlined text-primary">upload</span>
+                    </div>
+                    <span class="font-headline font-bold text-xs text-on-surface hide-on-request">Upload</span>
+                    <span class="font-label text-[10px] text-slate-400 mt-0.5 uppercase hide-on-request">PNG · JPG · TIFF</span>
+                    <div class="htmx-indicator flex-col items-center gap-2">
+                        <div class="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        <span class="font-label text-[10px] text-primary uppercase tracking-wider mt-2">Analyzing…</span>
+                    </div>
+                </label>
+            </form>
         </div>
 
         <div class="space-y-4">
@@ -206,11 +208,6 @@
         {% endblock upload_zone %}
 
         <div class="mt-auto pt-6 border-t border-slate-200/20 space-y-4">
-            <a href="/model-performance"
-               class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-container-low transition-colors group">
-                <span class="material-symbols-outlined text-outline group-hover:text-primary text-xl">monitoring</span>
-                <span class="font-label text-xs font-bold uppercase tracking-wider text-slate-500 group-hover:text-primary">Model Performance</span>
-            </a>
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">DL</div>
                 <div>

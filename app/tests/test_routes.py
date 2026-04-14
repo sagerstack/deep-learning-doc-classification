@@ -55,10 +55,24 @@ class TestHomePage:
         assert "OO-Dist" in response.text
         assert "OO-Dom" in response.text
 
-    def test_home_sidebar_contains_model_performance_link(self, client):
+    def test_top_nav_contains_drift_monitoring_link(self, client):
+        """Drift Monitoring in top-nav must route to /model-performance."""
         response = client.get("/")
-        assert "Model Performance" in response.text
-        assert "/model-performance" in response.text
+        assert response.status_code == 200
+        # Top-nav must contain the href
+        assert 'href="/model-performance"' in response.text
+        assert "Drift Monitoring" in response.text
+
+    def test_sidebar_does_not_contain_model_performance_link(self, client):
+        """The duplicate sidebar anchor for /model-performance must be absent."""
+        response = client.get("/")
+        assert response.status_code == 200
+        text = response.text
+        # Locate aside block and confirm it has no /model-performance anchor
+        aside_start = text.find("<aside")
+        aside_end = text.find("</aside>", aside_start)
+        aside_block = text[aside_start:aside_end]
+        assert "/model-performance" not in aside_block
 
 
 @pytest.mark.slow
