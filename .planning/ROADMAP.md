@@ -161,7 +161,7 @@ Plans:
 Plans:
 - [x] 06-01-PLAN.md — Structured inference logging + dashboard route/sidebar link
 - [x] 06-02-PLAN.md — Evidently batch job + per-model reports + setup docs
-- [ ] 06-03-PLAN.md — Gap closure: top-nav repoint + thumbs-up/down label capture + target DDL regression tests
+- [x] 06-03-PLAN.md — Gap closure: top-nav repoint + thumbs-up/down label capture + target DDL regression tests
 
 ## Progress
 
@@ -177,4 +177,4 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5 -> 6
 | 3. Notebook Completion - Training & Evaluation | 0/TBD | Not started | - |
 | 4. Notebook Finalization - Ablation Studies | 0/TBD | Not started | - |
 | 5. Demo Application - Classification Page | 0/6 | Planning complete | - |
-| 6. Model Performance Monitoring | 2/3 | Gap closure planned | 2026-04-14 |
+| 6. Model Performance Monitoring | 3/3 | Complete | 2026-04-14 |

@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The GraphSAGE model must demonstrate whether graph-based spatial reasoning improves document classification over CNN-only baselines — with clear, reproducible evidence.
-**Current focus:** Phase 6 complete — all gaps closed
+**Current focus:** Phase 6 verified and complete — milestone ready for audit
 
 ## Current Position
 
@@ -97,7 +97,7 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-04-14 UTC
-Stopped at: Completed 06-03-PLAN.md (gap closure) — 577eb4d
+Stopped at: Phase 6 fully verified (7/7 must-haves) — all gap closure committed
 Resume file: None
 
-**Milestone status:** Phases 5 and 6 (demo app + monitoring) fully executed including gap closure. All UAT gaps closed: top-nav Drift Monitoring routes to /model-performance, thumbs-up/down feedback writes target to inference_events, DDL regression tests pass. Phases 1–4 (notebook training pipeline) remain for academic submission.
+**Milestone status:** Phase 6 complete and verified. All 7 must-haves confirmed: inference logging, top-nav Drift Monitoring link, thumbs-up/down label feedback, target DDL, Evidently batch job, docs. Phases 1–4 (notebook training pipeline) remain for academic submission.
