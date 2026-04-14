@@ -36,7 +36,7 @@ NAV_ITEMS = (
     {"key": "demo", "label": "Demo", "href": "/"},
     {"key": "models", "label": "Models", "href": "/models"},
     {"key": "experiments", "label": "Experiments", "href": "/experiments"},
-    {"key": "drift-monitoring", "label": "Drift Monitoring", "href": "/model-performance"},
+    {"key": "drift-monitoring", "label": "Drift Monitoring", "href": "/model-performance", "target": "_blank"},
     {"key": "observability", "label": "Observability", "href": "/observability"},
 )
 

@@ -101,6 +101,7 @@
                 {% for item in nav_items %}
                 <a
                     href="{{ item.href }}"
+                    {% if item.target %}target="{{ item.target }}" rel="noopener noreferrer"{% endif %}
                     {% if item.is_active %}aria-current="page"{% endif %}
                     class="demo-nav-link {% if item.is_active %}demo-nav-link-active{% endif %}"
                 >
@@ -119,6 +120,7 @@
             {% for item in nav_items %}
             <a
                 href="{{ item.href }}"
+                {% if item.target %}target="{{ item.target }}" rel="noopener noreferrer"{% endif %}
                 {% if item.is_active %}aria-current="page"{% endif %}
                 class="demo-nav-link {% if item.is_active %}demo-nav-link-active{% endif %}"
             >
