@@ -34,10 +34,31 @@ class TestHomePage:
     def test_home_contains_sample_thumbnails(self, client):
         response = client.get("/")
         assert "in-dist/" in response.text
+        assert "oo-dist/" in response.text
+        assert "oo-dom/" in response.text
 
     def test_home_contains_upload_zone(self, client):
         response = client.get("/")
         assert 'type="file"' in response.text
+
+    def test_home_contains_updated_navigation(self, client):
+        response = client.get("/")
+        assert "Demo" in response.text
+        assert "Models" in response.text
+        assert "Experiments" in response.text
+        assert "Drift Monitoring" in response.text
+        assert "Observability" in response.text
+
+    def test_home_contains_updated_sample_categories(self, client):
+        response = client.get("/")
+        assert "In-Dist" in response.text
+        assert "OO-Dist" in response.text
+        assert "OO-Dom" in response.text
+
+    def test_home_sidebar_contains_model_performance_link(self, client):
+        response = client.get("/")
+        assert "Model Performance" in response.text
+        assert "/model-performance" in response.text
 
 
 @pytest.mark.slow

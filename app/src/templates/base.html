@@ -77,6 +77,7 @@
         }
     </script>
     <link rel="stylesheet" href="/static/css/app.css"/>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
@@ -89,43 +90,86 @@
 <body class="bg-surface text-on-surface selection:bg-primary-fixed">
 
 <!-- Top Bar -->
-<header class="flex justify-between items-center w-full px-6 h-16 sticky top-0 z-50 bg-white/80 backdrop-blur-md bg-slate-50">
-    <div class="flex flex-col border-l-4 border-primary pl-4">
-        <h1 class="text-lg font-bold tracking-tight text-indigo-900 font-headline">Document Classification: CNN vs GNN Approaches</h1>
-        <p class="text-xs font-body text-slate-500">61.502 Deep Learning for Enterprise — <span class="font-bold text-primary">Group 1</span></p>
-    </div>
-    <div class="flex items-center gap-6">
+<header class="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
+    <div class="flex items-center gap-6 px-6 py-4">
+        <div class="flex min-w-0 flex-col border-l-4 border-primary pl-4">
+            <h1 class="text-lg font-bold tracking-tight text-indigo-900 font-headline">Deep Learning Classification Demo</h1>
+            <p class="text-xs font-body text-slate-500">61.502 Deep Learning for Enterprise — <span class="font-bold text-primary">Group 1</span></p>
+        </div>
+        <nav aria-label="Primary" class="hidden flex-1 items-center justify-center lg:flex">
+            <div class="demo-nav-shell">
+                {% for item in nav_items %}
+                <a
+                    href="{{ item.href }}"
+                    {% if item.is_active %}aria-current="page"{% endif %}
+                    class="demo-nav-link {% if item.is_active %}demo-nav-link-active{% endif %}"
+                >
+                    {{ item.label }}
+                </a>
+                {% endfor %}
+            </div>
+        </nav>
         <div id="status-badge" class="flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-full">
             <span class="material-symbols-outlined text-outline scale-75">hourglass_empty</span>
             <span class="font-label text-xs uppercase tracking-wider text-outline font-bold">Ready</span>
         </div>
     </div>
+    <nav aria-label="Primary mobile" class="overflow-x-auto border-t border-slate-200/60 px-4 py-3 lg:hidden">
+        <div class="demo-nav-shell min-w-max">
+            {% for item in nav_items %}
+            <a
+                href="{{ item.href }}"
+                {% if item.is_active %}aria-current="page"{% endif %}
+                class="demo-nav-link {% if item.is_active %}demo-nav-link-active{% endif %}"
+            >
+                {{ item.label }}
+            </a>
+            {% endfor %}
+        </div>
+    </nav>
 </header>
 
 <main class="flex min-h-screen">
 
     <!-- Left Panel: Sidebar -->
-    <aside class="h-screen w-[35%] sticky left-0 top-16 bg-slate-50 flex flex-col p-8 space-y-8 border-r border-slate-200/10 overflow-y-auto">
+    <aside class="h-screen w-[35%] sticky left-0 top-16 bg-slate-50 flex flex-col p-8 space-y-8 border-r border-slate-200/10 overflow-y-auto"
+           x-data="{ selectedSrc: null, tab: 'in-dist' }">
         {% block upload_zone %}
-        <form id="upload-form" hx-post="/classify" hx-target="#results" hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-indicator="#upload-form">
-            <div class="space-y-4">
-                <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Input Stream</h3>
-                <label class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors group">
-                    <input type="file" name="file" accept="image/png,image/jpeg,image/tiff" class="hidden" onchange="this.form.requestSubmit()"/>
-                    <div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <span class="material-symbols-outlined text-primary">upload</span>
-                    </div>
-                    <span class="font-headline font-bold text-on-surface hide-on-request">Upload a document image</span>
-                    <span class="font-label text-xs text-slate-400 mt-1 uppercase hide-on-request">PNG, JPG, TIFF</span>
-                    <div class="htmx-indicator flex-col items-center gap-2">
-                        <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                        <span class="font-label text-xs text-primary uppercase tracking-wider mt-2">Analyzing document...</span>
-                    </div>
-                </label>
+        <div class="space-y-3">
+            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Input Stream</h3>
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Upload -->
+                <form id="upload-form" hx-post="/classify" hx-target="#results" hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-indicator="#upload-form">
+                    <label class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl h-40 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors group">
+                        <input type="file" name="file" accept="image/png,image/jpeg,image/tiff" class="hidden"
+                               @change="
+                                   const f = $event.target.files[0];
+                                   if (f) { const r = new FileReader(); r.onload = e => selectedSrc = e.target.result; r.readAsDataURL(f); }
+                                   $event.target.closest('form').requestSubmit();
+                               "/>
+                        <div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center mb-2 group-hover:scale-110 transition-transform hide-on-request">
+                            <span class="material-symbols-outlined text-primary">upload</span>
+                        </div>
+                        <span class="font-headline font-bold text-xs text-on-surface hide-on-request">Upload</span>
+                        <span class="font-label text-[10px] text-slate-400 mt-0.5 uppercase hide-on-request">PNG · JPG · TIFF</span>
+                        <div class="htmx-indicator flex-col items-center gap-2">
+                            <div class="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            <span class="font-label text-[10px] text-primary uppercase tracking-wider mt-2">Analyzing…</span>
+                        </div>
+                    </label>
+                </form>
+                <!-- Selected image (Alpine-driven) -->
+                <div x-show="selectedSrc" class="bg-surface-container-lowest rounded-xl p-1.5 h-40 overflow-hidden border border-primary/20">
+                    <img :src="selectedSrc" alt="Selected document" class="w-full h-full object-contain rounded-lg"/>
+                </div>
+                <div x-show="!selectedSrc" class="border-2 border-dashed border-outline-variant/30 bg-surface-container-lowest rounded-xl h-40 flex flex-col items-center justify-center">
+                    <span class="material-symbols-outlined text-3xl text-outline/30">image</span>
+                    <span class="font-label text-[10px] uppercase text-slate-300 mt-1">No selection</span>
+                </div>
             </div>
-        </form>
+        </div>
 
-        <div class="space-y-4" x-data="{ tab: 'in-dist' }">
+        <div class="space-y-4">
             <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Or try a sample</h3>
             {% if sample_categories | default([]) %}
             <div class="flex gap-1 bg-surface-container-low rounded-lg p-1">
@@ -140,7 +184,8 @@
             {% for cat in sample_categories %}
             <div x-show="tab === '{{ cat.key }}'" x-cloak class="grid grid-cols-2 gap-3">
                 {% for sample in cat.samples %}
-                <div class="bg-surface-container-lowest p-2 rounded-xl border border-transparent hover:border-primary cursor-pointer transition-all flex flex-col gap-2 group"
+                <div class="bg-surface-container-lowest p-2 rounded-xl border border-transparent hover:border-primary cursor-pointer transition-all flex flex-col gap-2 group sample-card {% if cat.key == 'oo-dom' %}sample-card-oodom{% endif %}"
+                     @click="selectedSrc = '/static/samples/{{ sample.filename }}'"
                      hx-post="/classify" hx-target="#results" hx-swap="innerHTML"
                      hx-vals='{"sample": "{{ sample.filename }}"}'
                      hx-indicator="#upload-form">
@@ -158,17 +203,14 @@
             {% endif %}
         </div>
 
-        {% if has_results and original_image_b64 %}
-        <div class="space-y-4">
-            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Current Document</h3>
-            <div class="bg-surface-container-lowest rounded-xl p-2">
-                <img alt="Uploaded document" class="w-full rounded-lg" src="data:image/png;base64,{{ original_image_b64 }}"/>
-            </div>
-        </div>
-        {% endif %}
         {% endblock upload_zone %}
 
-        <div class="mt-auto pt-6 border-t border-slate-200/20">
+        <div class="mt-auto pt-6 border-t border-slate-200/20 space-y-4">
+            <a href="/model-performance"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-container-low transition-colors group">
+                <span class="material-symbols-outlined text-outline group-hover:text-primary text-xl">monitoring</span>
+                <span class="font-label text-xs font-bold uppercase tracking-wider text-slate-500 group-hover:text-primary">Model Performance</span>
+            </a>
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">DL</div>
                 <div>
@@ -186,8 +228,11 @@
 
             {% if has_results %}
 
-            {% include "partials/cnn_features.html" %}
-            {% include "partials/graph_construction.html" %}
+            <div class="grid grid-cols-2 gap-8 items-start">
+                {% include "partials/cnn_features.html" %}
+                {% include "partials/graph_construction.html" %}
+            </div>
+            {% include "partials/gat_features.html" %}
             {% include "partials/model_predictions.html" %}
             {% include "partials/detailed_analysis.html" %}
 
