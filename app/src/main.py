@@ -13,9 +13,12 @@ from app.src.config import (
     CORS_ORIGINS,
     FORCE_DEVICE,
     LOG_LEVEL,
+    MONITORING_DB_PATH,
     STATIC_DIR,
 )
+from app.src.monitoring.store import init_db
 from app.src.routes.classify import router as classify_router
+from app.src.routes.monitoring import router as monitoring_router
 from app.src.services.model_registry import load_all_models
 
 logging.basicConfig(level=getattr(logging, LOG_LEVEL.upper(), logging.INFO))
@@ -34,6 +37,9 @@ def _detect_device() -> torch.device:
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
+    # Initialise monitoring DB before model loading
+    init_db(MONITORING_DB_PATH)
+
     device = _detect_device()
     logger.info("Starting model loading on device: %s", device)
 
@@ -74,3 +80,4 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(classify_router)
+app.include_router(monitoring_router)

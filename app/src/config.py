@@ -31,6 +31,14 @@ MODEL_DIR = Path(os.environ.get("MODEL_DIR", "models"))
 if not MODEL_DIR.is_absolute():
     MODEL_DIR = PROJECT_ROOT / MODEL_DIR
 
+# Monitoring
+_monitoring_db_raw = os.environ.get("MONITORING_DB_PATH", "monitoring/data/inference_events.sqlite3")
+MONITORING_DB_PATH = Path(_monitoring_db_raw)
+if not MONITORING_DB_PATH.is_absolute():
+    MONITORING_DB_PATH = PROJECT_ROOT / MONITORING_DB_PATH
+
+EVIDENTLY_DASHBOARD_URL = os.environ.get("EVIDENTLY_DASHBOARD_URL", "")
+
 RVL_CDIP_LABELS = [
     "letter",
     "form",
@@ -49,6 +57,14 @@ RVL_CDIP_LABELS = [
     "resume",
     "memo",
 ]
+
+# GAT Multimodal
+YOLO_REPO_ID = os.environ.get("YOLO_REPO_ID", "hantian/yolo-doclaynet")
+YOLO_FILENAME = os.environ.get("YOLO_FILENAME", "yolov8n-doclaynet.pt")
+YOLO_CONF = float(os.environ.get("YOLO_CONF", "0.15"))
+GAT_MAX_REGIONS = int(os.environ.get("GAT_MAX_REGIONS", "20"))
+GAT_K_NEIGHBORS = int(os.environ.get("GAT_K_NEIGHBORS", "8"))
+TEXT_ENCODER_MODEL = os.environ.get("TEXT_ENCODER_MODEL", "all-MiniLM-L6-v2")
 
 MODEL_CHECKPOINTS = {
     "CNN Baseline (ResNet-50)": MODEL_DIR / "exp14b_finetuned_resnet50_cnn.pt",
