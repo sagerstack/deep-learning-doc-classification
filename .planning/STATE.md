@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 ## Current Position
 
 Phase: 6 of 6 (Model Performance Monitoring)
-Plan: 1 of 1 (completed: 01)
-Status: In progress
-Last activity: 2026-04-14 — Completed 06-01-PLAN.md (structured inference logging + dashboard route)
+Plan: 2 of 2 (completed: 01, 02)
+Status: Phase complete
+Last activity: 2026-04-14 — Completed 06-02-PLAN.md (Evidently batch job + operator docs)
 
-Progress: [█████████░] ~90%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -79,6 +79,9 @@ Recent decisions affecting current work:
 - **[06-01]** Monitoring failure is non-fatal (try/except + warning log) — inference must not break on DB write failure
 - **[06-01]** EVIDENTLY_DASHBOARD_URL env var drives redirect; empty string triggers fallback HTML page
 - **[06-01]** sample_type column distinguishes "sample" vs "upload" for drift segmentation
+- **[06-02]** DataDriftPreset omitted when reference absent; DataSummaryPreset always runs
+- **[06-02]** Timestamp column must be converted to pd.datetime(utc=True) before passing to Evidently drift metrics
+- **[06-02]** Unlabeled report omits MulticlassClassification block; labeled report adds it only when target column present
 
 ### Pending Todos
 
@@ -90,8 +93,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-14 01:25 UTC
-Stopped at: 06-01-PLAN.md complete (a6327fb)
+Last session: 2026-04-14 09:42 UTC
+Stopped at: 06-02-PLAN.md complete (2277af2) — Phase 6 complete
 Resume file: None
 
 **Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the 02.1-02 human verification checkpoint. Phase 02.2-02 (notebook integration) is the next notebook plan to execute. A new planned Phase 6 covers Evidently-based model performance monitoring after the demo app is formally complete.
