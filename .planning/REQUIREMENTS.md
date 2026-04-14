@@ -56,6 +56,15 @@
 - **DEP-04**: Live CNN feature extraction with activation heatmap and OCR text density visualization
 - **DEP-05**: Live graph construction with side-by-side grid vs k-NN graph visualization and stats
 - **DEP-06**: Multi-model inference comparison table with per-model detailed analysis accordion
+- **DEP-07**: Sidebar navigation item "Model Performance" routes to the Evidently dashboard URL
+
+### Monitoring
+
+- **MON-01**: Persist one structured inference event per model prediction, including request metadata, model_id, confidence, probabilities, and latency
+- **MON-02**: Build batch Evidently monitoring reports per model_id using tagged runs within a shared project
+- **MON-03**: Monitor unlabeled serving health per model (class mix, confidence drift, latency drift, input health, OCR/text-density availability)
+- **MON-04**: Support labeled quality monitoring when ground-truth labels arrive later (accuracy, precision/recall/F1, confusion trends)
+- **MON-05**: Provide a configurable dashboard URL and app route so the demo UI can open the monitoring dashboard
 
 ## Out of Scope
 
@@ -64,7 +73,7 @@
 | GCN implementation | Teammate (Seow Chun Yong) owns this |
 | GAT implementation | Teammate (Prathosh Chander) owns this |
 | Custom data augmentation | Not the project's research focus |
-| MLOps / deployment infrastructure | Academic project, not production |
+| Production-grade MLOps platform beyond lightweight monitoring | Academic project, not production |
 | Real-time serving optimization | Out of scope for course project |
 | Report writing | TBD with team, not tracked here |
 
@@ -97,12 +106,18 @@
 | DEP-04 | Phase 5 | Pending |
 | DEP-05 | Phase 5 | Pending |
 | DEP-06 | Phase 5 | Pending |
+| DEP-07 | Phase 6 | Complete |
+| MON-01 | Phase 6 | Complete |
+| MON-02 | Phase 6 | Complete |
+| MON-03 | Phase 6 | Complete |
+| MON-04 | Phase 6 | Complete |
+| MON-05 | Phase 6 | Complete |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 24
-- Unmapped: 0
+- v1 requirements: 20 total
+- Phase-mapped requirements: 31
+- Unmapped v2 requirements: 4 (`MDL-05`, `MDL-06`, `MDL-07`, `DEP-02`)
 
 ---
 *Requirements defined: 2026-03-25*
-*Last updated: 2026-03-25 after roadmap creation*
+*Last updated: 2026-04-13 after adding monitoring requirements*

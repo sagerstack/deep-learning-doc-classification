@@ -2,7 +2,7 @@
 
 ## Overview
 
-This roadmap delivers a complete GraphSAGE-based document classification system on RVL-CDIP, structured as an incrementally-built Jupyter notebook across four phases: building notebook sections for data loading and feature extraction, adding graph construction and model definitions, extending with training and evaluation infrastructure, and completing with ablation studies and final analysis.
+This roadmap delivers a complete GraphSAGE-based document classification system on RVL-CDIP, structured as an incrementally-built notebook workflow plus a demo application and lightweight monitoring layer: building notebook sections for data loading and feature extraction, adding graph construction and model definitions, extending with training and evaluation infrastructure, completing ablation studies, shipping a FastAPI demo, and adding Evidently-based model monitoring for the served app.
 
 ## Phases
 
@@ -18,6 +18,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2.2: Text-Aware Hybrid GNN** (INSERTED) - Add text density features to graph nodes for text-aware document classification
 - [ ] **Phase 3: Notebook Completion - Training & Evaluation** - Notebook sections: training loop, evaluation metrics, comparison plots, failure analysis
 - [ ] **Phase 4: Notebook Finalization - Ablation Studies** - Notebook sections: ablation experiments, results tables, RVL-CDIP-N evaluation
+- [ ] **Phase 5: Demo Application - Classification Page** - Build a FastAPI web application (Page 1: Classification Demo) that lets a presenter upload/select a document image and see CNN feature extraction, graph construction visualization, and side-by-side model predictions in real-time
+- [x] **Phase 6: Model Performance Monitoring** - Add Evidently-based monitoring, per-model inference logging, and a dashboard link from the demo UI
 
 ## Phase Details
 
@@ -142,10 +144,28 @@ Plans:
 - [ ] 05-05-PLAN.md — Templates + routes + HTMX wiring
 - [ ] 05-06-PLAN.md — Sample images, route tests, end-to-end verification
 
+### Phase 6: Model Performance Monitoring
+**Goal**: Add lightweight model performance monitoring for the FastAPI demo using Evidently, with one structured inference log row per model prediction, periodic per-model monitoring reports, and a sidebar route to the monitoring dashboard
+**Depends on**: Phase 5
+**Requirements**: DEP-07, MON-01, MON-02, MON-03, MON-04, MON-05
+**Stack**: FastAPI + SQLite + pandas + Evidently, with dashboard URL configured by env var and batch monitoring run outside the request path
+**Success Criteria** (what must be TRUE):
+  1. Every `/classify` request persists one durable monitoring row per model prediction with request_id, model_id, confidence, probabilities, latencies, and input metadata
+  2. The web app sidebar includes a "Model Performance" entry that routes to `/model-performance`, which redirects to the configured Evidently dashboard URL
+  3. A monitoring batch job reads logged events, groups by model_id, and generates one Evidently report per model per batch window
+  4. Unlabeled monitoring captures class distribution drift, confidence shifts, latency drift, and OCR/text-density availability rates per model
+  5. Labeled monitoring can be enabled later without changing the logging schema by adding target labels to the same event store
+  6. Monitoring setup is documented and runnable locally through a script or scheduled job outside the FastAPI request path
+**Plans**: 2 plans
+
+Plans:
+- [x] 06-01-PLAN.md — Structured inference logging + dashboard route/sidebar link
+- [x] 06-02-PLAN.md — Evidently batch job + per-model reports + setup docs
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -156,3 +176,4 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5
 | 3. Notebook Completion - Training & Evaluation | 0/TBD | Not started | - |
 | 4. Notebook Finalization - Ablation Studies | 0/TBD | Not started | - |
 | 5. Demo Application - Classification Page | 0/6 | Planning complete | - |
+| 6. Model Performance Monitoring | 2/2 | Complete | 2026-04-14 |
