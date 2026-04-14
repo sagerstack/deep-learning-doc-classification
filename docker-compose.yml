@@ -12,11 +12,31 @@ services:
       - "${APP_PORT:-9000}:${APP_PORT:-9000}"
     volumes:
       - ./models:/app/models:ro
+      - ./app:/app/app:ro
+      - ./src:/app/src:ro
+      - ./monitoring:/app/monitoring
     restart: unless-stopped
-    command: ["python", "-m", "uvicorn", "app.src.main:app", "--host", "0.0.0.0", "--port", "${APP_PORT:-9000}"]
+    command: ["python", "-m", "uvicorn", "app.src.main:app", "--host", "0.0.0.0", "--port", "${APP_PORT:-9000}", "--reload"]
     healthcheck:
       test: ["CMD", "python", "-c", "import os; import urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"APP_PORT\", \"9000\")}/')"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  monitoring:
+    # Optional one-shot monitoring job. Run manually, not on a schedule.
+    # Usage: docker compose --profile monitoring run --rm monitoring
+    # To publish to Evidently Cloud, set EVIDENTLY_API_KEY and EVIDENTLY_PROJECT_ID in .env.local
+    profiles: ["monitoring"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.local
+    volumes:
+      - ./monitoring:/app/monitoring
+      - ./scripts:/app/scripts:ro
+      - ./app:/app/app:ro
+    working_dir: /app
+    command: ["python", "scripts/monitoring/run_evidently.py", "--window-hours", "24", "--offline"]
