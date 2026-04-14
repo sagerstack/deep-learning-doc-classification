@@ -10,8 +10,9 @@ from torchvision.models import resnet50, ResNet50_Weights
 from torchvision.models.feature_extraction import create_feature_extractor
 
 from app.src.config import MODEL_DIR
-from src.model import (
+from app.src.model import (
     AttentionPoolFusionSAGE,
+    DocumentGAT,
     FusionGAT,
     FusionGraphSAGE,
     GatedBoCGraphSAGE,
@@ -164,10 +165,44 @@ def load_all_models(device: torch.device) -> dict:
 
         gnn_models[spec.name] = (spec, model)
 
+    # Load multimodal GAT
+    multimodal_gat_model = None
+    multimodal_gat_path = MODEL_DIR / "best_gat_multimodal_k8_L2.pt"
+    if multimodal_gat_path.exists():
+        multimodal_gat_model = DocumentGAT(
+            in_dim=2447,
+            hidden_dim=256,
+            out_dim=num_classes,
+            heads=4,
+            num_layers=2,
+            dropout=0.2,
+            pooling="mean",
+        )
+        ckpt = torch.load(multimodal_gat_path, map_location="cpu", weights_only=False)
+        state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
+        multimodal_gat_model.load_state_dict(state_dict)
+        multimodal_gat_model.eval()
+        multimodal_gat_model = multimodal_gat_model.to(device)
+        print(f"Loaded DocumentGAT (multimodal) from {multimodal_gat_path.name}")
+    else:
+        print(f"Warning: multimodal GAT checkpoint not found at {multimodal_gat_path}")
+
     print(f"Loaded CNN baseline + {len(gnn_models)} GNN models on {device}")
+
+    # Pre-load doctr text density detector once at startup.
+    # Loading it per-request causes a hang (model weights fetched/loaded on every call).
+    text_detector = None
+    try:
+        from src.text_features import create_text_detector
+        text_detector = create_text_detector(type("Config", (), {"device": device})())
+        print("Loaded doctr text density detector")
+    except Exception as exc:
+        print(f"Text density detector unavailable (will skip): {exc}")
 
     return {
         "feature_extractor": feature_extractor,
         "resnet50_classifier": resnet,
         "models": gnn_models,
+        "multimodal_gat_model": multimodal_gat_model,
+        "text_detector": text_detector,
     }

@@ -10,11 +10,7 @@ from PIL import Image
 from torchvision.models import ResNet50_Weights
 
 from app.src.config import RVL_CDIP_LABELS
-from src.graph import (
-    add_positional_encoding_2d,
-    build_grid_edge_index,
-    feature_map_to_graph_feature_knn,
-)
+from app.src.graph import add_positional_encoding_2d, build_grid_edge_index
 
 
 @dataclass
@@ -34,12 +30,20 @@ class PipelineResult:
     results: list[InferenceResult] = field(default_factory=list)
     layer4_features: Optional[torch.Tensor] = None  # [2048, 7, 7]
     text_density: Optional[torch.Tensor] = None  # [7, 7]
+    boc_features: Optional[torch.Tensor] = None  # [49, 70]
     grid_edge_index: Optional[torch.Tensor] = None
     knn_edge_index: Optional[torch.Tensor] = None
     graph_stats: dict = field(default_factory=dict)
     total_time_ms: float = 0.0
     feature_extraction_time_ms: float = 0.0
     graph_construction_time_ms: float = 0.0
+    # Multimodal GAT graph metadata
+    gat_boxes: list = field(default_factory=list)          # [(x, y, w, h, class_id), ...]
+    gat_layout_classes: list = field(default_factory=list) # [class_id, ...]
+    gat_edge_index: Optional[torch.Tensor] = None
+    gat_ocr_texts: list = field(default_factory=list)      # OCR text per region node
+    gat_img_w: int = 0
+    gat_img_h: int = 0
 
 
 def _build_knn_edges(x: torch.Tensor, k: int = 8) -> torch.Tensor:
@@ -68,15 +72,18 @@ def _compute_boc_from_image(image: Image.Image) -> Optional[torch.Tensor]:
         return None
 
 
-def _compute_text_density(image: Image.Image, device: torch.device) -> Optional[torch.Tensor]:
-    """Try to extract text density heatmap using doctr. Returns None if unavailable."""
-    try:
-        from src.text_features import create_text_detector, extract_text_density
+def _compute_text_density(image: Image.Image, detector, device: torch.device) -> Optional[torch.Tensor]:
+    """Run text density extraction using a pre-loaded doctr detector.
 
-        detector = create_text_detector(type("Config", (), {"device": device})())
-        density = extract_text_density(image, detector, device)
-        return density  # [7, 7]
-    except (ImportError, OSError, RuntimeError):
+    Args:
+        detector: doctr DetectionPredictor loaded at startup, or None if unavailable.
+    """
+    if detector is None:
+        return None
+    try:
+        from src.text_features import extract_text_density
+        return extract_text_density(image, detector, device)
+    except Exception:
         return None
 
 
@@ -185,9 +192,11 @@ def run_inference_pipeline(
 
     # Optionally compute BoC features
     boc_features = _compute_boc_from_image(image)
+    result.boc_features = boc_features
 
-    # Optionally compute text density (for visualization only)
-    result.text_density = _compute_text_density(image, device)
+    # Optionally compute text density using pre-loaded detector (for visualization only)
+    text_detector = registry.get("text_detector")
+    result.text_density = _compute_text_density(image, text_detector, device)
 
     # Batch vector for single graph (all nodes belong to graph 0)
     batch_vec = torch.zeros(49, dtype=torch.long)
@@ -258,6 +267,38 @@ def run_inference_pipeline(
             device=device,
         )
         result.results.append(inf_result)
+
+    # --- Multimodal GAT ---
+    multimodalGatModel = registry.get("multimodal_gat_model")
+    if multimodalGatModel is not None:
+        try:
+            from app.src.services.multimodal_gat import runMultimodalGatInference
+
+            probs, graphMeta, elapsedMs = runMultimodalGatInference(
+                image, multimodalGatModel, feature_extractor, device
+            )
+            confidence, predIdx = probs.max(dim=0)
+            result.results.append(
+                InferenceResult(
+                    model_name="multimodal_gat",
+                    display_name="Multimodal GAT (YOLO + OCR)",
+                    model_type="GNN+OCR",
+                    predicted_class=RVL_CDIP_LABELS[predIdx.item()],
+                    predicted_index=predIdx.item(),
+                    confidence=confidence.item(),
+                    probabilities=probs.tolist(),
+                    inference_time_ms=elapsedMs,
+                )
+            )
+            result.gat_boxes = graphMeta["boxes"]
+            result.gat_layout_classes = graphMeta["layout_classes"]
+            result.gat_edge_index = graphMeta["edge_index"]
+            result.gat_ocr_texts = graphMeta["ocr_texts"]
+            result.gat_img_w = graphMeta["img_w"]
+            result.gat_img_h = graphMeta["img_h"]
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("Multimodal GAT inference failed: %s", exc)
 
     # Sort by confidence descending
     result.results.sort(key=lambda r: r.confidence, reverse=True)
