@@ -111,7 +111,10 @@ def build_reports_for_window(
     for model_id, model_df in current_df.groupby("model_id"):
         logger.info("Processing model_id=%s  rows=%d", model_id, len(model_df))
         model_version = model_df["model_version"].iloc[0]
-        has_labels = "target" in model_df.columns and model_df["target"].notna().any()
+        labeled_count = model_df["target"].notna().sum() if "target" in model_df.columns else 0
+        # Require at least 5 labeled rows — fewer than that can't support a meaningful
+        # confusion matrix across 16 classes (sklearn rejects labels absent from y_true).
+        has_labels = labeled_count >= 5
 
         ref_model_df = (
             reference_df[reference_df["model_id"] == model_id].copy()
@@ -197,15 +200,16 @@ def _run_model_reports(
 
     # ── Labeled quality report (only when ground-truth labels are present) ─────
     if has_labels:
-        labeled_current = _build_evidently_dataset(current_df, include_target=True)
-        labeled_reference = (
-            _build_evidently_dataset(reference_df, include_target=True)
-            if reference_df is not None and len(reference_df) > 0
-            else None
-        )
+        # Only include rows where target is actually set — NaN rows cause sklearn
+        # confusion matrix to fail ("At least one label specified must be in y_true")
+        labeled_df = current_df[current_df["target"].notna()].copy()
+        labeled_current = _build_evidently_dataset(labeled_df, include_target=True)
+        # Reference dataset is synthetic and has no target column, so classification
+        # presets cannot compare against it — run labeled report without reference.
+        labeled_reference = None
 
         labeled_metrics = [
-            ClassificationPreset(),
+            ClassificationPreset(classification_name="document_class"),
         ]
         labeled_report = Report(
             metrics=labeled_metrics,
@@ -246,7 +250,18 @@ def _build_evidently_dataset(df: pd.DataFrame, *, include_target: bool) -> Datas
     requires both target and prediction columns). Classification-quality metrics are only
     included when ground-truth labels are available (include_target=True).
     """
+    df = df.copy()
+
+    # Evidently's time-based drift visualization requires a proper datetime column.
+    if "timestamp" in df.columns and not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+
     has_labels = include_target and "target" in df.columns and df["target"].notna().any()
+
+    if not include_target and "target" in df.columns:
+        # Drop target entirely for unlabeled datasets — Evidently flags "partially present"
+        # when current has the column (some rows labeled) but reference does not.
+        df = df.drop(columns=["target"])
 
     if has_labels:
         classification = [
