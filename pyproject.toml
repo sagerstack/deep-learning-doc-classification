@@ -24,7 +24,12 @@ dependencies = [
     "jinja2 (>=3.1.6,<4.0.0)",
     "jinja2-fragments (>=1.11.0,<2.0.0)",
     "python-multipart (>=0.0.24,<0.0.25)",
-    "python-dotenv (>=1.1.0,<2.0.0)"
+    "python-dotenv (>=1.1.0,<2.0.0)",
+    "ultralytics (>=8.0.0,<9.0.0)",
+    "sentence-transformers (>=3.0.0,<4.0.0)",
+    "plotly (>=5.0.0,<6.0.0)",
+    "evidently (>=0.7.0,<1.0.0)",
+    "pandas (>=2.0.0,<4.0.0)"
 ]
 
 

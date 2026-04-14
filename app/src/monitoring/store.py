@@ -6,7 +6,10 @@ Uses stdlib sqlite3 only. No ORM dependency.
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 from app.src.monitoring.schema import PROB_COLUMN_NAMES, InferenceEvent
 
@@ -137,6 +140,38 @@ def query_events(
     except sqlite3.Error as exc:
         logger.error("Failed to query inference events: %s", exc)
         return []
+
+
+def fetch_events_as_dataframe(
+    db_path: Path,
+    *,
+    since: Optional[str] = None,
+    until: Optional[str] = None,
+    model_id: Optional[str] = None,
+    limit: int = 10_000,
+) -> "pd.DataFrame":
+    """Return recent inference events as a pandas DataFrame.
+
+    Intended for batch monitoring jobs (e.g. scripts/monitoring/run_evidently.py).
+    The app serving path uses query_events() which avoids the pandas dependency.
+
+    Args:
+        db_path: Path to the SQLite file.
+        since: ISO-8601 timestamp lower bound (inclusive).
+        until: ISO-8601 timestamp upper bound (inclusive).
+        model_id: Filter to a specific model.
+        limit: Maximum rows to return.
+
+    Returns:
+        DataFrame with one row per inference event, newest first.
+        Empty DataFrame with schema columns if the DB is absent or has no rows.
+    """
+    import pandas as pd  # noqa: PLC0415
+
+    rows = query_events(db_path, since=since, until=until, model_id=model_id, limit=limit)
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows)
 
 
 # ─── Internal helpers ──────────────────────────────────────────────────────────
