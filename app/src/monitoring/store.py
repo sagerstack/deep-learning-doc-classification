@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS inference_events (
     model_time_ms          REAL    NOT NULL DEFAULT 0.0,
     ocr_available          INTEGER NOT NULL DEFAULT 0,
     text_density_available INTEGER NOT NULL DEFAULT 0,
-    error_type             TEXT
+    error_type             TEXT,
+    target                 TEXT
 )
 """
 
@@ -63,12 +64,20 @@ CREATE INDEX IF NOT EXISTS idx_inference_events_model_id
 
 
 def init_db(db_path: Path) -> None:
-    """Create the SQLite database file and table if they do not exist."""
+    """Create the SQLite database file and table if they do not exist.
+
+    Also runs a lightweight migration to add the `target` column to existing
+    databases that were created before labeled monitoring support was added.
+    """
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(str(db_path)) as conn:
         conn.execute(_CREATE_TABLE_SQL)
         conn.execute(_CREATE_INDEX_SQL)
         conn.execute(_CREATE_INDEX_MODEL_SQL)
+        # Idempotent migration: add target column if absent
+        existing = {row[1] for row in conn.execute("PRAGMA table_info(inference_events)")}
+        if "target" not in existing:
+            conn.execute("ALTER TABLE inference_events ADD COLUMN target TEXT")
         conn.commit()
     logger.info("Monitoring DB ready: %s", db_path)
 
@@ -189,7 +198,7 @@ def _column_list() -> list[str]:
     base.extend([
         "total_time_ms", "feature_time_ms", "graph_time_ms", "model_time_ms",
         "ocr_available", "text_density_available",
-        "error_type",
+        "error_type", "target",
     ])
     return base
 
@@ -206,6 +215,6 @@ def _event_to_row(e: InferenceEvent) -> tuple:
     row.extend([
         e.total_time_ms, e.feature_time_ms, e.graph_time_ms, e.model_time_ms,
         int(e.ocr_available), int(e.text_density_available),
-        e.error_type,
+        e.error_type, e.target,
     ])
     return tuple(row)

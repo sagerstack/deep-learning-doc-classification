@@ -53,6 +53,9 @@ class InferenceEvent:
     # Error capture (None on success)
     error_type: Optional[str] = None
 
+    # Ground-truth label for labeled quality monitoring (backfilled post-hoc)
+    target: Optional[str] = None
+
 
 def build_inference_events(
     *,
