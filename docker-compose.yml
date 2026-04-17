@@ -11,7 +11,7 @@ services:
     ports:
       - "${APP_PORT:-9000}:${APP_PORT:-9000}"
     volumes:
-      - ./models:/app/models:ro
+      - ./final-models:/app/models:ro
       - ./app:/app/app:ro
       - ./src:/app/src:ro
       - ./monitoring:/app/monitoring
@@ -40,3 +40,16 @@ services:
       - ./app:/app/app:ro
     working_dir: /app
     command: ["python", "scripts/monitoring/run_evidently.py", "--window-hours", "24", "--offline"]
+
+  seq:
+    image: datalust/seq:latest
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "5341:80"
+    volumes:
+      - seq-data:/data
+    restart: unless-stopped
+
+volumes:
+  seq-data:
