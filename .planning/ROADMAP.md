@@ -163,6 +163,24 @@ Plans:
 - [x] 06-02-PLAN.md — Evidently batch job + per-model reports + setup docs
 - [x] 06-03-PLAN.md — Gap closure: top-nav repoint + thumbs-up/down label capture + target DDL regression tests
 
+### Phase 7: Seq Structured Logging & Observability
+**Goal**: Implement Seq as the central observability platform for the demo app — structured JSON logs for every user action, API call, and model interaction, with each model identifiable by name in every log event, wired into Docker Compose alongside the app, and linked from the existing Observability nav item in the title bar
+**Depends on**: Phase 6
+**Requirements**: OBS-01, OBS-02, OBS-03, OBS-04
+**Stack**: Seq (Docker), structlog (Python structured logging), FastAPI middleware, Docker Compose service
+**Success Criteria** (what must be TRUE):
+  1. Seq runs as a Docker Compose service alongside the app and is reachable at localhost:5341 (UI) / localhost:5341 (ingestion)
+  2. Every `/classify` request produces structured log events covering: request received, image metadata, per-model inference start/end with model name + latency + top prediction + confidence, graph construction timing, and request complete with total latency
+  3. Every sample image click and file upload produces a structured user action log event with action type and metadata
+  4. Model name is a first-class structured field (not embedded in a message string) on every model-related log event, enabling per-model filtering in Seq
+  5. All log events include request_id for end-to-end trace correlation across the full pipeline
+  6. The Observability nav item in the title bar links to the Seq UI (localhost:5341)
+  7. Logs are descriptive enough to troubleshoot any inference failure without reading source code
+**Plans**: TBD
+
+Plans:
+- [ ] TBD after planning
+
 ## Progress
 
 **Execution Order:**
