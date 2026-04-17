@@ -1,8 +1,9 @@
 import io
 import logging
-import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+
+import structlog
 
 from fastapi import APIRouter, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse
@@ -28,6 +29,7 @@ from app.src.services.visualization import (
 )
 
 logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 router = APIRouter()
 templates = Jinja2Blocks(directory=str(TEMPLATES_DIR))
@@ -100,12 +102,26 @@ def _load_image_from_sample(sample_name: str) -> Image.Image:
     return Image.open(sample_path).convert("RGB")
 
 
+def _infer_sample_set(sample_name: str | None) -> str:
+    if not sample_name:
+        return "upload"
+    category = sample_name.split("/", 1)[0] if "/" in sample_name else ""
+    if category == "in-dist":
+        return "in_dist"
+    if category == "oo-dist":
+        return "oo_dist"
+    if category == "oo-dom":
+        return "oo_dom"
+    return "upload"
+
+
 def _build_result_context(
     request: Request,
     image: Image.Image,
     *,
     sample_type: str = "upload",
     sample_name: str = "upload",
+    request_id: str,
 ) -> dict:
     registry = request.app.state.registry
     device = request.app.state.device
@@ -113,7 +129,6 @@ def _build_result_context(
     pipeline = run_inference_pipeline(image, registry, device)
 
     # --- Monitoring: persist one row per model prediction ---
-    request_id = str(uuid.uuid4())
     try:
         timestamp = datetime.now(timezone.utc).isoformat()
         events = build_inference_events(
@@ -244,27 +259,114 @@ async def classify(
     file: UploadFile | None = None,
     sample: str | None = Form(default=None),
 ):
+    # Retrieve middleware request_id from contextvars (bound by LoggingMiddleware)
+    middleware_ctx = structlog.contextvars.get_contextvars()
+    request_id = middleware_ctx.get("request_id")
+    if not request_id:
+        import uuid as _uuid
+        request_id = str(_uuid.uuid4())
+        structlog.contextvars.bind_contextvars(request_id=request_id)
+
+    # Determine action fields
+    if sample:
+        action_type = "sample_click"
+        sample_label = sample
+        sample_set = _infer_sample_set(sample)
+    elif file and file.filename:
+        action_type = "file_upload"
+        sample_label = file.filename
+        sample_set = "upload"
+    else:
+        action_type = "unknown"
+        sample_label = None
+        sample_set = None
+
+    # Bind action fields into contextvars (inherited by all downstream log events)
+    structlog.contextvars.bind_contextvars(
+        action_type=action_type,
+        sample_name=sample_label,
+        sample_set=sample_set,
+    )
+
+    # Emit request.received (image dimensions not yet known)
+    log.info(
+        "request.received",
+        event_type="request.received",
+        action_type=action_type,
+        sample_name=sample_label,
+        sample_set=sample_set,
+    )
+
     if sample:
         try:
             image = _load_image_from_sample(sample)
         except FileNotFoundError:
+            log.error(
+                "request.failed",
+                event_type="request.failed",
+                error=f"Sample not found: {sample}",
+                reason="sample_not_found",
+            )
             return HTMLResponse(
                 content='<div class="text-error font-label text-sm p-4">Sample not found. Please select a valid sample.</div>',
                 status_code=404,
             )
-        context = _build_result_context(
-            request, image, sample_type="sample", sample_name=sample
+        structlog.contextvars.bind_contextvars(
+            image_width=image.width,
+            image_height=image.height,
         )
+        try:
+            context = _build_result_context(
+                request, image, sample_type="sample", sample_name=sample, request_id=request_id
+            )
+        except Exception as exc:
+            log.error(
+                "request.failed",
+                event_type="request.failed",
+                error=str(exc),
+                exc_info=True,
+            )
+            raise
     elif file and file.filename:
         image = _load_image_from_upload(file)
-        context = _build_result_context(
-            request, image, sample_type="upload", sample_name=file.filename or "upload"
+        structlog.contextvars.bind_contextvars(
+            image_width=image.width,
+            image_height=image.height,
         )
+        try:
+            context = _build_result_context(
+                request, image, sample_type="upload", sample_name=file.filename or "upload", request_id=request_id
+            )
+        except Exception as exc:
+            log.error(
+                "request.failed",
+                event_type="request.failed",
+                error=str(exc),
+                exc_info=True,
+            )
+            raise
     else:
+        log.error(
+            "request.failed",
+            event_type="request.failed",
+            error="No image provided",
+            reason="no_image",
+        )
         return HTMLResponse(
             content='<div class="text-error font-label text-sm p-4">No image provided. Upload a file or select a sample.</div>',
             status_code=400,
         )
+
+    best = context.get("results", [None])[0] if context.get("results") else None
+    log.info(
+        "request.completed",
+        event_type="request.completed",
+        total_latency_ms=context.get("total_time_ms", 0.0),
+        model_count=len(context.get("results", [])),
+        best_model_id=(best.model_name if best else None),
+        best_predicted_class=(best.predicted_class if best else None),
+        best_confidence=(best.confidence if best else None),
+    )
 
     is_htmx = request.headers.get("HX-Request") == "true"
 
