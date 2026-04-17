@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 ## Current Position
 
 Phase: 7 of 7 (Seq Structured Logging + Observability)
-Plan: 1 of 3 (completed: 01)
+Plan: 2 of 3 (completed: 01, 02)
 Status: In progress
-Last activity: 2026-04-17 — Completed 07-01-PLAN.md (Seq infra baseline: compose service, config vars, dependencies)
+Last activity: 2026-04-17 — Completed 07-02-PLAN.md (logging backbone: configure_logging(), LoggingMiddleware, main.py wired)
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -89,6 +89,10 @@ Recent decisions affecting current work:
 - **[07-01]** SEQ_SERVER_URL default is empty string (disables ingestion non-fatally) — same pattern as EVIDENTLY_DASHBOARD_URL
 - **[07-01]** SEQ_SERVER_URL=http://seq:80 inside Docker compose network; http://localhost:5341 from host (different URLs for same service)
 - **[07-01]** ACCEPT_EULA: Y mandatory in datalust/seq environment block — container exits without it
+- **[07-02]** SeqLogHandler(server_url, api_key, batch_size=10, auto_flush_timeout=2) — api_key param confirmed valid in seqlog 0.4.3; no fallback to log_to_seq() needed
+- **[07-02]** Processor chain: merge_contextvars → add_log_level → add_logger_name → TimeStamper(iso/utc) → StackInfoRenderer → UnicodeDecoder; terminal: remove_processors_meta + JSONRenderer
+- **[07-02]** LoggingMiddleware registered before CORSMiddleware — outermost in Starlette stack (confirmed via app.user_middleware)
+- **[07-02]** clear_contextvars() in dispatch() clears ALL contextvars including environment; must re-bind environment after clearing
 
 ### Pending Todos
 
@@ -100,8 +104,8 @@ None - poetry.lock pending from Phase 6 resolved in 07-01 (SSL did not block thi
 
 ## Session Continuity
 
-Last session: 2026-04-17 UTC
-Stopped at: Completed 07-01-PLAN.md (Seq infra baseline)
+Last session: 2026-04-17T15:29:25Z
+Stopped at: Completed 07-02-PLAN.md (logging backbone)
 Resume file: None
 
-**Milestone status:** Phase 7 plan 01 complete. Seq service, config vars, and structlog/seqlog dependencies in place. Plans 02 (logging-core) and 03 (log-emission) can proceed.
+**Milestone status:** Phase 7 plans 01-02 complete. Logging backbone live: structlog JSON on stdout, per-request UUID contextvars, optional Seq ingestion. Plan 03 (log emission) can proceed immediately.
