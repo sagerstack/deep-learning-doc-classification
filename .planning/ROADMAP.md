@@ -176,15 +176,19 @@ Plans:
   5. All log events include request_id for end-to-end trace correlation across the full pipeline
   6. The Observability nav item in the title bar links to the Seq UI (localhost:5341)
   7. Logs are descriptive enough to troubleshoot any inference failure without reading source code
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] TBD after planning
+- [ ] 07-01-PLAN.md — Seq Docker service + config env vars + structlog/seqlog dependencies
+- [ ] 07-02-PLAN.md — structlog + seqlog configure_logging() + request_id middleware wired into main.py
+- [ ] 07-03-PLAN.md — Route-level events (request.received/completed/failed) + Observability nav repoint to Seq UI
+- [ ] 07-04-PLAN.md — Inference-layer events (graph.built, model.inference, model.inference.failed)
+- [ ] 07-05-PLAN.md — End-to-end human verification of the full observability trail in Seq UI
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5 -> 6
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -196,3 +200,4 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5 -> 6
 | 4. Notebook Finalization - Ablation Studies | 0/TBD | Not started | - |
 | 5. Demo Application - Classification Page | 0/6 | Planning complete | - |
 | 6. Model Performance Monitoring | 3/3 | Complete | 2026-04-14 |
+| 7. Seq Structured Logging & Observability | 0/5 | Planning complete | - |
