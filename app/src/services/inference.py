@@ -1,16 +1,21 @@
 """Single-image inference pipeline: image -> features -> graphs -> multi-model predictions."""
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Optional
 
+import structlog
 import torch
 import torch.nn.functional as F
 from PIL import Image
 from torchvision.models import ResNet50_Weights
+from torchvision import transforms as T
 
 from app.src.config import RVL_CDIP_LABELS
 from app.src.graph import add_positional_encoding_2d, build_grid_edge_index
+
+log = structlog.get_logger()
 
 
 @dataclass
@@ -108,8 +113,10 @@ def _run_single_model(
     if spec.graph_type == "gated_boc" and boc_features is not None:
         x_boc = boc_features.to(device)
         logits = model(x, ei, b, gf, x_boc)
-    else:
+    elif spec.needs_global_feat:
         logits = model(x, ei, b, gf)
+    else:
+        logits = model(x, ei, b)
 
     probs = F.softmax(logits, dim=1).squeeze(0)
     confidence, pred_idx = probs.max(dim=0)
@@ -150,8 +157,13 @@ def run_inference_pipeline(
     feature_extractor = registry["feature_extractor"]
     resnet_classifier = registry["resnet50_classifier"]
 
-    # Preprocess image
-    transform = ResNet50_Weights.IMAGENET1K_V2.transforms()
+    # Preprocess image — must match training: Grayscale(3) before Normalize
+    transform = T.Compose([
+        T.Resize((224, 224)),
+        T.Grayscale(num_output_channels=3),
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
     img_rgb = image.convert("RGB") if image.mode != "RGB" else image
     input_tensor = transform(img_rgb).unsqueeze(0).to(device)  # [1, 3, 224, 224]
 
@@ -189,6 +201,16 @@ def run_inference_pipeline(
         "knn_edges": knn_edge_index.shape[1],
         "avg_degree": knn_edge_index.shape[1] / 49,
     }
+
+    log.info(
+        "graph.built",
+        event_type="graph.built",
+        graph_latency_ms=result.graph_construction_time_ms,
+        feature_extraction_ms=result.feature_extraction_time_ms,
+        num_nodes=result.graph_stats.get("num_nodes", 0),
+        knn_edges=result.graph_stats.get("knn_edges", 0),
+        grid_edges=result.graph_stats.get("grid_edges", 0),
+    )
 
     # Optionally compute BoC features
     boc_features = _compute_boc_from_image(image)
