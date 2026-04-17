@@ -39,6 +39,12 @@ if not MONITORING_DB_PATH.is_absolute():
 
 EVIDENTLY_DASHBOARD_URL = os.environ.get("EVIDENTLY_DASHBOARD_URL", "")
 
+# Seq structured logging
+SEQ_SERVER_URL = os.environ.get("SEQ_SERVER_URL", "")    # empty disables Seq ingestion (non-fatal)
+SEQ_API_KEY = os.environ.get("SEQ_API_KEY", "")          # blank = no auth (local dev)
+SEQ_UI_URL = os.environ.get("SEQ_UI_URL", "http://localhost:5341")
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "local")
+
 RVL_CDIP_LABELS = [
     "letter",
     "form",
@@ -61,16 +67,14 @@ RVL_CDIP_LABELS = [
 # GAT Multimodal
 YOLO_REPO_ID = os.environ.get("YOLO_REPO_ID", "hantian/yolo-doclaynet")
 YOLO_FILENAME = os.environ.get("YOLO_FILENAME", "yolov8n-doclaynet.pt")
-YOLO_CONF = float(os.environ.get("YOLO_CONF", "0.15"))
-GAT_MAX_REGIONS = int(os.environ.get("GAT_MAX_REGIONS", "20"))
+YOLO_CONF = float(os.environ.get("YOLO_CONF", "0.25"))
+GAT_MAX_REGIONS = int(os.environ.get("GAT_MAX_REGIONS", "50"))
 GAT_K_NEIGHBORS = int(os.environ.get("GAT_K_NEIGHBORS", "8"))
 TEXT_ENCODER_MODEL = os.environ.get("TEXT_ENCODER_MODEL", "all-MiniLM-L6-v2")
 
 MODEL_CHECKPOINTS = {
-    "CNN Baseline (ResNet-50)": MODEL_DIR / "exp14b_finetuned_resnet50_cnn.pt",
-    "Fusion GraphSAGE": MODEL_DIR / "exp16_fusion_featknn_graphsage.pt",
-    "Fusion GAT": MODEL_DIR / "exp23_gat_fusion.pt",
-    "BoC GraphSAGE": MODEL_DIR / "exp25_boc_sage.pt",
-    "Gated BoC GraphSAGE": MODEL_DIR / "exp26_gated_boc.pt",
-    "Attention Pool GraphSAGE": MODEL_DIR / "exp27_attn_pool.pt",
+    "CNN Baseline (ResNet-50)": MODEL_DIR / "best_model_resnet50_03.pt",
+    "Fusion GraphSAGE": MODEL_DIR / "fusion_gnn_feat_knn_best.pt",
+    "Inductive GCN": MODEL_DIR / "inductive_gcn_320k.pt",
+    "Multimodal GAT": MODEL_DIR / "best_gat_multimodal_k8_L2.pt",
 }
