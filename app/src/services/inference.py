@@ -51,6 +51,28 @@ class PipelineResult:
     gat_img_h: int = 0
 
 
+def _emit_model_inference(r: "InferenceResult") -> None:
+    """Emit a model.inference structured event for a completed inference result."""
+    indexed = sorted(
+        enumerate(r.probabilities),
+        key=lambda ix_p: ix_p[1],
+        reverse=True,
+    )[:3]
+    top3 = [
+        {"class": RVL_CDIP_LABELS[i], "score": float(p)}
+        for i, p in indexed
+    ]
+    log.info(
+        "model.inference",
+        event_type="model.inference",
+        model_id=r.model_name,
+        predicted_class=r.predicted_class,
+        confidence=float(r.confidence),
+        top3_classes=top3,
+        model_latency_ms=float(r.inference_time_ms),
+    )
+
+
 def _build_knn_edges(x: torch.Tensor, k: int = 8) -> torch.Tensor:
     """Build feature-space k-NN edge index from node features [N, C]."""
     x_norm = x / (x.norm(dim=1, keepdim=True) + 1e-8)
@@ -242,6 +264,7 @@ def run_inference_pipeline(
             inference_time_ms=cnn_ms,
         )
     )
+    _emit_model_inference(result.results[-1])
 
     # --- GNN Models ---
     for spec_name, (spec, model) in registry["models"].items():
@@ -278,17 +301,27 @@ def run_inference_pipeline(
         else:
             edge_idx = grid_edge_index
 
-        inf_result = _run_single_model(
-            spec=spec,
-            model=model,
-            node_features=node_feat,
-            edge_index=edge_idx,
-            batch=batch_vec,
-            global_feat=avgpool,
-            boc_features=boc_features,
-            device=device,
-        )
-        result.results.append(inf_result)
+        try:
+            inf_result = _run_single_model(
+                spec=spec,
+                model=model,
+                node_features=node_feat,
+                edge_index=edge_idx,
+                batch=batch_vec,
+                global_feat=avgpool,
+                boc_features=boc_features,
+                device=device,
+            )
+            result.results.append(inf_result)
+            _emit_model_inference(inf_result)
+        except Exception as exc:
+            log.error(
+                "model.inference.failed",
+                event_type="model.inference.failed",
+                model_id=spec.name,
+                error=str(exc),
+                exc_info=True,
+            )
 
     # --- Multimodal GAT ---
     multimodalGatModel = registry.get("multimodal_gat_model")
@@ -312,6 +345,7 @@ def run_inference_pipeline(
                     inference_time_ms=elapsedMs,
                 )
             )
+            _emit_model_inference(result.results[-1])
             result.gat_boxes = graphMeta["boxes"]
             result.gat_layout_classes = graphMeta["layout_classes"]
             result.gat_edge_index = graphMeta["edge_index"]
@@ -319,8 +353,13 @@ def run_inference_pipeline(
             result.gat_img_w = graphMeta["img_w"]
             result.gat_img_h = graphMeta["img_h"]
         except Exception as exc:
-            import logging
-            logging.getLogger(__name__).warning("Multimodal GAT inference failed: %s", exc)
+            log.error(
+                "model.inference.failed",
+                event_type="model.inference.failed",
+                model_id="multimodal_gat",
+                error=str(exc),
+                exc_info=True,
+            )
 
     # Sort by confidence descending
     result.results.sort(key=lambda r: r.confidence, reverse=True)
