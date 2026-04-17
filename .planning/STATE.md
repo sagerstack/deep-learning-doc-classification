@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 ## Current Position
 
 Phase: 7 of 7 (Seq Structured Logging + Observability)
-Plan: 2 of 3 (completed: 01, 02)
+Plan: 3 of 3 (completed: 01, 02, 03)
 Status: In progress
-Last activity: 2026-04-17 — Completed 07-02-PLAN.md (logging backbone: configure_logging(), LoggingMiddleware, main.py wired)
+Last activity: 2026-04-17 — Completed 07-03-PLAN.md (request events + request_id unification)
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 96%
 
 ## Performance Metrics
 
@@ -93,6 +93,10 @@ Recent decisions affecting current work:
 - **[07-02]** Processor chain: merge_contextvars → add_log_level → add_logger_name → TimeStamper(iso/utc) → StackInfoRenderer → UnicodeDecoder; terminal: remove_processors_meta + JSONRenderer
 - **[07-02]** LoggingMiddleware registered before CORSMiddleware — outermost in Starlette stack (confirmed via app.user_middleware)
 - **[07-02]** clear_contextvars() in dispatch() clears ALL contextvars including environment; must re-bind environment after clearing
+- **[07-03]** request_id is required kwarg on _build_result_context (no default) — enforces caller supply, prevents silent dual-UUID split
+- **[07-03]** image_width/image_height bound AFTER image load (not in request.received) — dimensions unknown at handler entry
+- **[07-03]** request.failed emitted on ALL early-exit paths so failures are always observable in Seq
+- **[07-03]** Observability nav item uses SEQ_UI_URL env var (default http://localhost:5341) with target=_blank
 
 ### Pending Todos
 
@@ -104,8 +108,8 @@ None - poetry.lock pending from Phase 6 resolved in 07-01 (SSL did not block thi
 
 ## Session Continuity
 
-Last session: 2026-04-17T15:29:25Z
-Stopped at: Completed 07-02-PLAN.md (logging backbone)
+Last session: 2026-04-17T15:33:47Z
+Stopped at: Completed 07-03-PLAN.md (request events + request_id unification)
 Resume file: None
 
-**Milestone status:** Phase 7 plans 01-02 complete. Logging backbone live: structlog JSON on stdout, per-request UUID contextvars, optional Seq ingestion. Plan 03 (log emission) can proceed immediately.
+**Milestone status:** Phase 7 plans 01-03 complete. Route-level structured events live: request.received/completed/failed emitted per classify request, end-to-end request_id correlation between middleware + log events + monitoring SQLite row. Plan 04 (inference-layer events) can proceed immediately — contextvars already pre-loaded with action_type, sample_name, sample_set, image_width, image_height.
