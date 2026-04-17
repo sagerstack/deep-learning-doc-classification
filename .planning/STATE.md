@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The GraphSAGE model must demonstrate whether graph-based spatial reasoning improves document classification over CNN-only baselines — with clear, reproducible evidence.
-**Current focus:** Phase 7 in progress — Seq structured logging observability
+**Current focus:** Phase 7 complete — Seq structured logging observability
 
 ## Current Position
 
 Phase: 7 of 7 (Seq Structured Logging + Observability)
-Plan: 3 of 3 (completed: 01, 02, 03)
-Status: In progress
-Last activity: 2026-04-17 — Completed 07-03-PLAN.md (request events + request_id unification)
+Plan: 4 of 4 (completed: 01, 02, 03, 04)
+Status: Phase complete
+Last activity: 2026-04-17 — Completed 07-04-PLAN.md (inference-layer structured events)
 
-Progress: [█████████░] 96%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -31,11 +31,11 @@ Progress: [█████████░] 96%
 | 02.1-hybrid-fusion-positional-encoding | 2 | 6min | 3min |
 | 02.2-text-aware-hybrid-gnn | 1 | 7min | 7min |
 | 05-demo-application-classification-page | 5 | 24min | 5min |
-| 07-seq-structured-logging-observability | 1 | 2min | 2min |
+| 07-seq-structured-logging-observability | 4 | 10min | 2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 7min, 4min, 8min, 1min, 6min
-- Trend: Stable ~5min
+- Last 5 plans: 8min, 1min, 6min, 2min, 1min
+- Trend: Stable ~4min
 
 *Updated after each plan completion*
 
@@ -97,6 +97,11 @@ Recent decisions affecting current work:
 - **[07-03]** image_width/image_height bound AFTER image load (not in request.received) — dimensions unknown at handler entry
 - **[07-03]** request.failed emitted on ALL early-exit paths so failures are always observable in Seq
 - **[07-03]** Observability nav item uses SEQ_UI_URL env var (default http://localhost:5341) with target=_blank
+- **[07-04]** model_id uses InferenceResult.model_name (slug), not display_name — machine-parseable in Seq queries
+- **[07-04]** model_id is always a keyword argument on log.info(), never embedded in the message string
+- **[07-04]** GNN loop wrapped in try/except at _run_single_model call site — gives access to spec.name for model_id in failure event
+- **[07-04]** OCR-unavailable placeholder branches do not emit model.inference (skipped via continue, not false zero-confidence events)
+- **[07-04]** import logging retained at line 3; only GAT except branch logger.warning replaced
 
 ### Pending Todos
 
@@ -108,8 +113,8 @@ None - poetry.lock pending from Phase 6 resolved in 07-01 (SSL did not block thi
 
 ## Session Continuity
 
-Last session: 2026-04-17T15:33:47Z
-Stopped at: Completed 07-03-PLAN.md (request events + request_id unification)
+Last session: 2026-04-17T15:36:29Z
+Stopped at: Completed 07-04-PLAN.md (inference-layer structured events)
 Resume file: None
 
-**Milestone status:** Phase 7 plans 01-03 complete. Route-level structured events live: request.received/completed/failed emitted per classify request, end-to-end request_id correlation between middleware + log events + monitoring SQLite row. Plan 04 (inference-layer events) can proceed immediately — contextvars already pre-loaded with action_type, sample_name, sample_set, image_width, image_height.
+**Milestone status:** Phase 7 complete. All structured events live in Seq: request.received/completed/failed (route layer), graph.built (graph construction), model.inference/model.inference.failed (per-model inference). End-to-end request_id correlation across all events. Non-fatal per-model exception handling ensures pipeline resilience.
