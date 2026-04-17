@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from jinja2_fragments.fastapi import Jinja2Blocks
 from PIL import Image
 
-from app.src.config import MONITORING_DB_PATH, RVL_CDIP_LABELS, SAMPLES_DIR, TEMPLATES_DIR
+from app.src.config import MONITORING_DB_PATH, RVL_CDIP_LABELS, SAMPLES_DIR, SEQ_UI_URL, TEMPLATES_DIR
 from app.src.monitoring.schema import build_inference_events
 from app.src.monitoring.store import log_inference_events
 from app.src.services.inference import run_inference_pipeline
@@ -37,7 +37,7 @@ NAV_ITEMS = (
     {"key": "models", "label": "Models", "href": "/models"},
     {"key": "experiments", "label": "Experiments", "href": "/experiments"},
     {"key": "drift-monitoring", "label": "Drift Monitoring", "href": "/model-performance", "target": "_blank"},
-    {"key": "observability", "label": "Observability", "href": "/observability"},
+    {"key": "observability", "label": "Observability", "href": SEQ_UI_URL, "target": "_blank"},
 )
 
 SAMPLE_CATEGORIES = (
