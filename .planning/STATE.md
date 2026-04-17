@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The GraphSAGE model must demonstrate whether graph-based spatial reasoning improves document classification over CNN-only baselines — with clear, reproducible evidence.
-**Current focus:** Phase 6 verified and complete — milestone ready for audit
+**Current focus:** Phase 7 in progress — Seq structured logging observability
 
 ## Current Position
 
-Phase: 6 of 6 (Model Performance Monitoring)
-Plan: 3 of 3 (completed: 01, 02, 03)
-Status: Phase complete (gap closure done)
-Last activity: 2026-04-14 — Completed 06-03-PLAN.md (gap closure: nav repoint + label feedback)
+Phase: 7 of 7 (Seq Structured Logging + Observability)
+Plan: 1 of 3 (completed: 01)
+Status: In progress
+Last activity: 2026-04-17 — Completed 07-01-PLAN.md (Seq infra baseline: compose service, config vars, dependencies)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -31,6 +31,7 @@ Progress: [██████████] 100%
 | 02.1-hybrid-fusion-positional-encoding | 2 | 6min | 3min |
 | 02.2-text-aware-hybrid-gnn | 1 | 7min | 7min |
 | 05-demo-application-classification-page | 5 | 24min | 5min |
+| 07-seq-structured-logging-observability | 1 | 2min | 2min |
 
 **Recent Trend:**
 - Last 5 plans: 7min, 4min, 8min, 1min, 6min
@@ -85,10 +86,13 @@ Recent decisions affecting current work:
 - **[06-03]** correct=true writes target=predicted_label; correct=false is no-op (NULL more honest than guessing true label)
 - **[06-03]** hx-vals uses string "true"/"false" not JSON boolean; route normalises via .lower() check
 - **[06-03]** request_id lifted before monitoring try/except to guarantee availability in template context
+- **[07-01]** SEQ_SERVER_URL default is empty string (disables ingestion non-fatally) — same pattern as EVIDENTLY_DASHBOARD_URL
+- **[07-01]** SEQ_SERVER_URL=http://seq:80 inside Docker compose network; http://localhost:5341 from host (different URLs for same service)
+- **[07-01]** ACCEPT_EULA: Y mandatory in datalust/seq environment block — container exits without it
 
 ### Pending Todos
 
-- poetry.lock not regenerated via `poetry add` (SSL cert issue). Package installed in venv and declared in pyproject.toml. Run `poetry lock --no-update` in a stable network environment.
+None - poetry.lock pending from Phase 6 resolved in 07-01 (SSL did not block this run).
 
 ### Blockers/Concerns
 
@@ -96,8 +100,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-14 UTC
-Stopped at: Phase 6 fully verified (7/7 must-haves) — all gap closure committed
+Last session: 2026-04-17 UTC
+Stopped at: Completed 07-01-PLAN.md (Seq infra baseline)
 Resume file: None
 
-**Milestone status:** Phase 6 complete and verified. All 7 must-haves confirmed: inference logging, top-nav Drift Monitoring link, thumbs-up/down label feedback, target DDL, Evidently batch job, docs. Phases 1–4 (notebook training pipeline) remain for academic submission.
+**Milestone status:** Phase 7 plan 01 complete. Seq service, config vars, and structlog/seqlog dependencies in place. Plans 02 (logging-core) and 03 (log-emission) can proceed.
