@@ -16,12 +16,13 @@ from app.src.config import (
     MONITORING_DB_PATH,
     STATIC_DIR,
 )
+from app.src.logging_config import configure_logging
+from app.src.middleware.logging import LoggingMiddleware
 from app.src.monitoring.store import init_db
 from app.src.routes.classify import router as classify_router
 from app.src.routes.monitoring import router as monitoring_router
 from app.src.services.model_registry import load_all_models
 
-logging.basicConfig(level=getattr(logging, LOG_LEVEL.upper(), logging.INFO))
 logger = logging.getLogger(__name__)
 
 
@@ -37,6 +38,8 @@ def _detect_device() -> torch.device:
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
+    configure_logging()
+
     # Initialise monitoring DB before model loading
     init_db(MONITORING_DB_PATH)
 
@@ -69,6 +72,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(LoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
