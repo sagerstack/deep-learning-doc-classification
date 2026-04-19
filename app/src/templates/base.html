@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Document Classification: CNN vs GNN Approaches</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#191c1d",
+                        "tertiary-container": "#795300",
+                        "on-primary-container": "#cacfff",
+                        "on-surface-variant": "#454652",
+                        "inverse-surface": "#2e3132",
+                        "tertiary-fixed-dim": "#ffba38",
+                        "background": "#f8f9fa",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-dim": "#d9dadb",
+                        "on-secondary-fixed-variant": "#354a53",
+                        "inverse-primary": "#bac3ff",
+                        "surface": "#f8f9fa",
+                        "on-primary-fixed-variant": "#293ca0",
+                        "tertiary-fixed": "#ffdeac",
+                        "primary-fixed": "#dee0ff",
+                        "surface-container-low": "#f3f4f5",
+                        "primary-fixed-dim": "#bac3ff",
+                        "on-tertiary-fixed-variant": "#604100",
+                        "surface-container": "#edeeef",
+                        "surface-container-high": "#e7e8e9",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#cfe6f2",
+                        "tertiary": "#5b3d00",
+                        "primary-container": "#3f51b5",
+                        "outline": "#757684",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-tertiary-fixed": "#281900",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#b4cad6",
+                        "secondary": "#4c616c",
+                        "on-surface": "#191c1d",
+                        "surface-tint": "#4355b9",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#f8f9fa",
+                        "on-tertiary-container": "#ffc971",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f0f1f2",
+                        "secondary-fixed": "#cfe6f2",
+                        "on-primary-fixed": "#00105c",
+                        "on-secondary-fixed": "#071e27",
+                        "surface-variant": "#e1e3e4",
+                        "primary": "#24389c",
+                        "outline-variant": "#c5c5d4",
+                        "on-secondary-container": "#526772"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    }
+                },
+            },
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/app.css"/>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: flex; }
+        .htmx-request .hide-on-request { display: none; }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-fixed">
+
+<!-- Top Bar -->
+<header class="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
+    <div class="flex items-center gap-6 px-6 py-4">
+        <div class="flex min-w-0 flex-col border-l-4 border-primary pl-4">
+            <h1 class="text-lg font-bold tracking-tight text-indigo-900 font-headline">Document Classification Research</h1>
+            <p class="text-xs font-body text-slate-500">61.502 Deep Learning for Enterprise — <span class="font-bold text-primary">Group 1</span></p>
+        </div>
+        <nav aria-label="Primary" class="hidden flex-1 items-center justify-center lg:flex">
+            <div class="demo-nav-shell">
+                {% for item in nav_items %}
+                <a
+                    href="{{ item.href }}"
+                    {% if item.target %}target="{{ item.target }}" rel="noopener noreferrer"{% endif %}
+                    {% if item.is_active %}aria-current="page"{% endif %}
+                    class="demo-nav-link {% if item.is_active %}demo-nav-link-active{% endif %}"
+                >
+                    {{ item.label }}
+                </a>
+                {% endfor %}
+            </div>
+        </nav>
+        <div id="status-badge" class="flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-full">
+            <span class="material-symbols-outlined text-outline scale-75">hourglass_empty</span>
+            <span class="font-label text-xs uppercase tracking-wider text-outline font-bold">Ready</span>
+        </div>
+    </div>
+    <nav aria-label="Primary mobile" class="overflow-x-auto border-t border-slate-200/60 px-4 py-3 lg:hidden">
+        <div class="demo-nav-shell min-w-max">
+            {% for item in nav_items %}
+            <a
+                href="{{ item.href }}"
+                {% if item.target %}target="{{ item.target }}" rel="noopener noreferrer"{% endif %}
+                {% if item.is_active %}aria-current="page"{% endif %}
+                class="demo-nav-link {% if item.is_active %}demo-nav-link-active{% endif %}"
+            >
+                {{ item.label }}
+            </a>
+            {% endfor %}
+        </div>
+    </nav>
+</header>
+
+<main class="flex min-h-screen">
+
+    <!-- Left Panel: Sidebar -->
+    <aside class="h-screen w-[35%] sticky left-0 top-16 bg-slate-50 flex flex-col p-8 space-y-8 border-r border-slate-200/10 overflow-y-auto"
+           x-data="{ selectedSrc: null, selectedLabel: null, tab: 'in-dist' }">
+        {% block upload_zone %}
+        <!-- Selected Image -->
+        <div class="space-y-3">
+            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Selected Image</h3>
+            <div x-show="selectedSrc" class="relative bg-surface-container-lowest rounded-xl p-1.5 h-[30rem] overflow-hidden border border-primary/20">
+                <img :src="selectedSrc" alt="Selected document" class="w-full h-full object-cover rounded-lg"/>
+                <div x-show="selectedLabel" class="absolute bottom-3 left-3 right-3 flex items-center gap-1.5">
+                    <span class="font-label text-[9px] uppercase tracking-widest text-slate-400">True class</span>
+                    <span class="bg-primary/90 text-white font-label font-bold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full" x-text="selectedLabel"></span>
+                </div>
+            </div>
+            <div x-show="!selectedSrc" class="border-2 border-dashed border-outline-variant/30 bg-surface-container-lowest rounded-xl h-[30rem] flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined text-5xl text-outline/30">image</span>
+                <span class="font-label text-[10px] uppercase text-slate-300 mt-2">No selection</span>
+            </div>
+        </div>
+
+        <!-- Input Stream -->
+        <div class="space-y-3">
+            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Input Stream</h3>
+            <form id="upload-form" hx-post="/classify" hx-target="#results" hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-indicator="#upload-form">
+                <label class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl h-40 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors group">
+                    <input type="file" name="file" accept="image/png,image/jpeg,image/tiff" class="hidden"
+                           @change="
+                               const f = $event.target.files[0];
+                               if (f) { const r = new FileReader(); r.onload = e => selectedSrc = e.target.result; r.readAsDataURL(f); selectedLabel = null; }
+                               $event.target.closest('form').requestSubmit();
+                           "/>
+                    <div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center mb-2 group-hover:scale-110 transition-transform hide-on-request">
+                        <span class="material-symbols-outlined text-primary">upload</span>
+                    </div>
+                    <span class="font-headline font-bold text-xs text-on-surface hide-on-request">Upload</span>
+                    <span class="font-label text-[10px] text-slate-400 mt-0.5 uppercase hide-on-request">PNG · JPG · TIFF</span>
+                    <div class="htmx-indicator flex-col items-center gap-2">
+                        <div class="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        <span class="font-label text-[10px] text-primary uppercase tracking-wider mt-2">Analyzing…</span>
+                    </div>
+                </label>
+            </form>
+        </div>
+
+        <div class="space-y-4">
+            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Or try a sample</h3>
+            {% if sample_categories | default([]) %}
+            <div class="flex gap-1 bg-surface-container-low rounded-lg p-1">
+                {% for cat in sample_categories %}
+                <button @click="tab = '{{ cat.key }}'"
+                        :class="tab === '{{ cat.key }}' ? 'bg-white shadow-sm text-primary font-bold' : 'text-slate-500 hover:text-slate-700'"
+                        class="flex-1 font-label text-[10px] uppercase tracking-wider px-2 py-2 rounded-md transition-all text-center">
+                    {{ cat.name }}
+                </button>
+                {% endfor %}
+            </div>
+            {% for cat in sample_categories %}
+            <div x-show="tab === '{{ cat.key }}'" x-cloak class="grid grid-cols-2 gap-3">
+                {% for sample in cat.samples %}
+                <div class="bg-surface-container-lowest p-2 rounded-xl border border-transparent hover:border-primary cursor-pointer transition-all flex flex-col gap-2 group sample-card {% if cat.key == 'oo-dom' %}sample-card-oodom{% endif %}"
+                     @click="selectedSrc = '/static/samples/{{ sample.filename }}'; selectedLabel = '{{ sample.label }}'"
+                     hx-post="/classify" hx-target="#results" hx-swap="innerHTML"
+                     hx-vals='{"sample": "{{ sample.filename }}"}'
+                     hx-indicator="#upload-form">
+                    <img alt="{{ sample.label }} sample" class="w-full h-24 object-cover rounded-lg" src="/static/samples/{{ sample.filename }}"/>
+                    <span class="font-label text-[10px] font-bold uppercase tracking-tighter px-1 text-slate-600 group-hover:text-primary">{{ sample.label }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center py-8 text-slate-400">
+                <span class="material-symbols-outlined text-3xl mb-2 block">image</span>
+                <span class="font-label text-xs uppercase">No samples available</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {% endblock upload_zone %}
+
+        <div class="mt-auto pt-6 border-t border-slate-200/20 space-y-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs">DL</div>
+                <div>
+                    <p class="font-headline font-bold text-sm text-on-surface">RVL-CDIP Dataset</p>
+                    <p class="font-label text-[10px] uppercase text-slate-500 tracking-wider">16 document classes • Enterprise Research</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Right Panel: Scrollable Content -->
+    <div class="w-[65%] p-10 space-y-12 bg-surface">
+        <div id="results">
+            {% block results_section %}
+
+            {% if has_results %}
+
+            <div class="space-y-16">
+                {% include "partials/cnn_features.html" %}
+                {% include "partials/graph_construction.html" %}
+                {% include "partials/gcn_features.html" %}
+                {% include "partials/gat_features.html" %}
+                {% include "partials/model_predictions.html" %}
+                {% include "partials/detailed_analysis.html" %}
+            </div>
+
+            {% else %}
+
+            <!-- Placeholder: shown before any classification -->
+            <div class="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
+                <div class="w-20 h-20 rounded-full bg-surface-container-low flex items-center justify-center">
+                    <span class="material-symbols-outlined text-4xl text-outline">document_scanner</span>
+                </div>
+                <div class="space-y-2">
+                    <h2 class="font-headline font-extrabold text-2xl text-on-surface">Upload a document to begin</h2>
+                    <p class="font-body text-sm text-slate-500 max-w-md">
+                        Select an image or drag and drop a scanned document. The pipeline will extract CNN features, construct a spatial graph, and run all models for comparison.
+                    </p>
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-full">
+                        <span class="material-symbols-outlined text-sm text-secondary">image</span>
+                        <span class="font-label text-[10px] uppercase tracking-wider text-slate-500">CNN Features</span>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-full">
+                        <span class="material-symbols-outlined text-sm text-secondary">hub</span>
+                        <span class="font-label text-[10px] uppercase tracking-wider text-slate-500">Graph Construction</span>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-full">
+                        <span class="material-symbols-outlined text-sm text-secondary">analytics</span>
+                        <span class="font-label text-[10px] uppercase tracking-wider text-slate-500">6 Models</span>
+                    </div>
+                </div>
+            </div>
+
+            {% endif %}
+
+            {% endblock results_section %}
+        </div>
+    </div>
+
+</main>
+
+<!-- Footer -->
+<footer class="w-full h-12 bg-white flex items-center justify-center border-t border-slate-100">
+    <p class="font-label text-[10px] text-slate-400 uppercase tracking-widest">Deep Learning Experiment Environment v2.4.0 • Academic License: MIT</p>
+</footer>
+
+</body>
+</html>

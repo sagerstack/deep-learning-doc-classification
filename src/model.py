@@ -4,7 +4,8 @@ import os
 
 import torch
 import torch.nn as nn
-from torch_geometric.nn import SAGEConv, global_mean_pool
+from torch_geometric.nn import GATConv, SAGEConv, global_mean_pool
+from torch_geometric.utils import scatter, softmax as pyg_softmax
 
 NUM_CLASSES = int(os.environ.get("NUM_CLASSES", "16"))
 
@@ -13,10 +14,10 @@ class GraphSAGEClassifier(nn.Module):
     """Two-layer GraphSAGE classifier with global mean pooling.
 
     Architecture:
-        SAGEConv(in, hidden) → ReLU → Dropout
-        → SAGEConv(hidden, embed) → ReLU
-        → global_mean_pool
-        → Linear(embed, num_classes)
+        SAGEConv(in, hidden) -> ReLU -> Dropout
+        -> SAGEConv(hidden, embed) -> ReLU
+        -> global_mean_pool
+        -> Linear(embed, num_classes)
 
     Args:
         in_channels: Input feature dimension per node (e.g., 2048)
@@ -71,11 +72,11 @@ class HybridGraphSAGE(nn.Module):
     with global context from ResNet-50 avgpool via concatenation fusion.
 
     Architecture:
-        GNN path: SAGEConv(node_dim, hidden) → ReLU → Dropout
-                  → SAGEConv(hidden, embed) → ReLU
-                  → global_mean_pool → gnn_embed [batch_size, embed_channels]
+        GNN path: SAGEConv(node_dim, hidden) -> ReLU -> Dropout
+                  -> SAGEConv(hidden, embed) -> ReLU
+                  -> global_mean_pool -> gnn_embed [batch_size, embed_channels]
         CNN path: global_feat [batch_size, global_channels]
-        Fusion: concat [gnn_embed, global_feat] → Linear(fusion_dim, num_classes)
+        Fusion: concat [gnn_embed, global_feat] -> Linear(fusion_dim, num_classes)
 
     Args:
         node_dim: Input node feature dimension (2048 features + 2 PE coords = 2050)
@@ -234,3 +235,287 @@ class TextAwareGraphSAGE(nn.Module):
         # Classification
         logits = self.classifier(fused)
         return logits
+
+
+class FusionGraphSAGE(nn.Module):
+    """GraphSAGE with global feature fusion via Sequential classifier.
+
+    GNN processes raw CNN node features (no PE) and fuses the graph-level
+    embedding with CNN global_feat through a two-layer classifier.
+
+    Architecture:
+        GNN: SAGEConv(in, hidden) -> ReLU -> Dropout
+             -> SAGEConv(hidden, gnn_embed) -> ReLU -> Dropout
+             -> global_mean_pool
+        Fusion: concat [global_feat, gnn_embed]
+                -> Linear(fusion_dim, 512) -> ReLU -> Dropout
+                -> Linear(512, num_classes)
+
+    Args:
+        in_channels: Input node feature dimension (2048 raw CNN features)
+        hidden: First SAGEConv output dimension
+        gnn_embed: Second SAGEConv output dimension
+        num_classes: Number of classification categories
+        dropout: Dropout probability
+        global_dim: CNN global feature dimension (ResNet-50 avgpool)
+    """
+
+    def __init__(
+        self,
+        in_channels: int = 2048,
+        hidden: int = 256,
+        gnn_embed: int = 128,
+        num_classes: int = NUM_CLASSES,
+        dropout: float = 0.5,
+        global_dim: int = 2048,
+    ):
+        super().__init__()
+        self.conv1 = SAGEConv(in_channels, hidden)
+        self.conv2 = SAGEConv(hidden, gnn_embed)
+        self.dropout = nn.Dropout(dropout)
+        self.relu = nn.ReLU()
+
+        fusion_dim = global_dim + gnn_embed
+        self.classifier = nn.Sequential(
+            nn.Linear(fusion_dim, 512),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(512, num_classes),
+        )
+
+    def forward(self, x, edge_index, batch, global_feat):
+        x = self.conv1(x, edge_index)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.conv2(x, edge_index)
+        x = self.relu(x)
+        x = self.dropout(x)
+        gnn_out = global_mean_pool(x, batch)
+
+        if global_feat.dim() == 3:
+            global_feat = global_feat.squeeze(1)
+
+        fused = torch.cat([global_feat, gnn_out], dim=1)
+        return self.classifier(fused)
+
+
+class FusionGAT(nn.Module):
+    """GAT with global feature fusion via Sequential classifier.
+
+    Uses multi-head attention convolutions instead of SAGEConv.
+
+    Architecture:
+        GNN: GATConv(in, hidden//heads, heads) -> ReLU -> Dropout
+             -> GATConv(hidden, embed, heads=1) -> ReLU
+             -> global_mean_pool
+        Fusion: concat [global_feat, gnn_embed]
+                -> Linear(fusion_dim, 512) -> ReLU -> Dropout
+                -> Linear(512, num_classes)
+
+    Args:
+        in_channels: Input node feature dimension (2048 raw CNN features)
+        hidden: First GATConv total output dimension (hidden//heads per head)
+        embed: Second GATConv output dimension
+        num_classes: Number of classification categories
+        dropout: Dropout probability
+        heads: Number of attention heads in first GATConv
+    """
+
+    def __init__(
+        self,
+        in_channels: int = 2048,
+        hidden: int = 256,
+        embed: int = 128,
+        num_classes: int = NUM_CLASSES,
+        dropout: float = 0.5,
+        heads: int = 4,
+    ):
+        super().__init__()
+        self.conv1 = GATConv(in_channels, hidden // heads, heads=heads, dropout=dropout)
+        self.conv2 = GATConv(hidden, embed, heads=1, concat=False, dropout=dropout)
+        self.dropout = nn.Dropout(dropout)
+        self.relu = nn.ReLU()
+
+        fusion_dim = 2048 + embed
+        self.classifier = nn.Sequential(
+            nn.Linear(fusion_dim, 512),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(512, num_classes),
+        )
+
+    def forward(self, x, edge_index, batch, global_feat):
+        h = self.conv1(x, edge_index)
+        h = self.relu(h)
+        h = self.dropout(h)
+        h = self.conv2(h, edge_index)
+        h = self.relu(h)
+        gnn_out = global_mean_pool(h, batch)
+
+        if global_feat.dim() == 3:
+            global_feat = global_feat.squeeze(1)
+
+        fused = torch.cat([global_feat, gnn_out], dim=1)
+        return self.classifier(fused)
+
+
+class GatedBoCGraphSAGE(nn.Module):
+    """GraphSAGE with gated Bag-of-Characters fusion.
+
+    Applies a learned gate on BoC text features before concatenating
+    them with CNN node features for GNN processing. The gate allows the
+    model to selectively suppress or amplify text signals per node.
+
+    Architecture:
+        Text path: gate = sigmoid(text_gate(x_boc)) * text_proj(x_boc)
+        Node features: concat [cnn_features, gated_text] -> [N, cnn_dim + proj_dim]
+        GNN: SAGEConv -> ReLU -> Dropout -> SAGEConv -> ReLU -> global_mean_pool
+        Fusion: BatchNorm(gnn_embed) + BatchNorm(global_feat) -> concat -> Linear
+
+    Args:
+        cnn_dim: CNN node feature dimension (2048 + 2 PE = 2050)
+        boc_dim: Bag-of-Characters vocabulary size (70)
+        proj_dim: Projected text feature dimension (16)
+        hidden_channels: First SAGEConv output dimension
+        embed_channels: Second SAGEConv output dimension
+        global_channels: CNN global feature dimension
+        num_classes: Number of classification categories
+        dropout: Dropout probability
+    """
+
+    def __init__(
+        self,
+        cnn_dim: int = 2050,
+        boc_dim: int = 70,
+        proj_dim: int = 16,
+        hidden_channels: int = 256,
+        embed_channels: int = 128,
+        global_channels: int = 2048,
+        num_classes: int = NUM_CLASSES,
+        dropout: float = 0.5,
+    ):
+        super().__init__()
+        # Gated text feature projection
+        self.text_proj = nn.Linear(boc_dim, proj_dim)
+        self.text_gate = nn.Linear(boc_dim, proj_dim)
+
+        # GNN layers on concatenated [cnn_features, gated_text]
+        node_dim = cnn_dim + proj_dim
+        self.conv1 = SAGEConv(node_dim, hidden_channels)
+        self.conv2 = SAGEConv(hidden_channels, embed_channels)
+        self.dropout = nn.Dropout(dropout)
+        self.relu = nn.ReLU()
+
+        # BatchNorm before fusion
+        self.gnn_bn = nn.BatchNorm1d(embed_channels)
+        self.cnn_bn = nn.BatchNorm1d(global_channels)
+
+        # Fusion classifier
+        fusion_dim = embed_channels + global_channels
+        self.classifier = nn.Linear(fusion_dim, num_classes)
+
+    def forward(self, x, edge_index, batch, global_feat, x_boc):
+        # Gated text features
+        gate = torch.sigmoid(self.text_gate(x_boc))
+        projected = self.text_proj(x_boc)
+        gated_text = gate * projected
+
+        # Concatenate CNN node features with gated text
+        x = torch.cat([x, gated_text], dim=1)
+
+        # GNN path
+        x = self.conv1(x, edge_index)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.conv2(x, edge_index)
+        x = self.relu(x)
+
+        # Graph-level pooling
+        gnn_embed = global_mean_pool(x, batch)
+
+        if global_feat.dim() == 3:
+            global_feat = global_feat.squeeze(1)
+
+        # Normalize both paths
+        gnn_embed = self.gnn_bn(gnn_embed)
+        global_feat = self.cnn_bn(global_feat)
+
+        # Fusion and classification
+        fused = torch.cat([gnn_embed, global_feat], dim=1)
+        return self.classifier(fused)
+
+
+class AttentionPoolFusionSAGE(nn.Module):
+    """GraphSAGE with learned attention pooling instead of mean pooling.
+
+    Replaces global_mean_pool with a query-key attention mechanism
+    that learns which nodes are most informative for classification.
+
+    Architecture:
+        GNN: SAGEConv(node_dim, hidden) -> ReLU -> Dropout
+             -> SAGEConv(hidden, embed) -> ReLU
+        Attention pool: attn_score = query @ key(node_embed)^T
+                        -> softmax per graph -> weighted sum
+        Fusion: BatchNorm(attn_pool) + BatchNorm(global_feat) -> concat -> Linear
+
+    Args:
+        node_dim: Input node feature dimension (2048 + 2 PE = 2050)
+        hidden_channels: First SAGEConv output dimension
+        embed_channels: Second SAGEConv output dimension
+        global_channels: CNN global feature dimension
+        num_classes: Number of classification categories
+        dropout: Dropout probability
+    """
+
+    def __init__(
+        self,
+        node_dim: int = 2050,
+        hidden_channels: int = 256,
+        embed_channels: int = 128,
+        global_channels: int = 2048,
+        num_classes: int = NUM_CLASSES,
+        dropout: float = 0.5,
+    ):
+        super().__init__()
+        # GNN layers
+        self.conv1 = SAGEConv(node_dim, hidden_channels)
+        self.conv2 = SAGEConv(hidden_channels, embed_channels)
+        self.dropout = nn.Dropout(dropout)
+        self.relu = nn.ReLU()
+
+        # Attention pooling: learned query + key projection
+        self.attn_query = nn.Parameter(torch.randn(1, embed_channels))
+        self.attn_key = nn.Linear(embed_channels, embed_channels, bias=False)
+
+        # BatchNorm before fusion
+        self.gnn_bn = nn.BatchNorm1d(embed_channels)
+        self.cnn_bn = nn.BatchNorm1d(global_channels)
+
+        # Fusion classifier
+        fusion_dim = embed_channels + global_channels
+        self.classifier = nn.Linear(fusion_dim, num_classes)
+
+    def forward(self, x, edge_index, batch, global_feat):
+        # GNN path
+        x = self.conv1(x, edge_index)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.conv2(x, edge_index)
+        x = self.relu(x)
+
+        # Attention pooling
+        keys = self.attn_key(x)
+        attn_scores = (keys * self.attn_query).sum(dim=-1)
+        attn_weights = pyg_softmax(attn_scores, batch)
+        gnn_embed = scatter(x * attn_weights.unsqueeze(-1), batch, dim=0, reduce='sum')
+
+        if global_feat.dim() == 3:
+            global_feat = global_feat.squeeze(1)
+
+        # Normalize both paths
+        gnn_embed = self.gnn_bn(gnn_embed)
+        global_feat = self.cnn_bn(global_feat)
+
+        # Fusion and classification
+        fused = torch.cat([gnn_embed, global_feat], dim=1)
+        return self.classifier(fused)

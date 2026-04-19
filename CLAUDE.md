@@ -11,12 +11,51 @@
 | 3 | Sagar Pratap Singh | 1010736 |
 
 ## Deadline
-- Submission: April 17th, 11:59pm
+- Submission: April 17th, 11:59pm (submitted)
+
+## Key Files for Reviewers
+
+| Path | Description |
+|------|-------------|
+| `docs/(EDL Group 1) Document Classification Using GNN- Final Project Report.pdf` | **Final report** |
+| `final-notebooks/` | One notebook per model — all results are reproducible from here |
+| `final-models/` | Four trained checkpoints loaded by the demo app |
+| `docs/architecture.excalidraw` | Full system architecture diagram |
+| `docs/EDL-Group1-Project-Proposal.docx` | Original project proposal |
+| `docs/Project Instructions-updated Rubrics.pdf` | Course rubrics |
+
+## Running the Demo App
+
+```bash
+# 1. Install dependencies
+poetry install
+
+# 2. Configure environment (defaults work out of the box)
+cp .env.example .env.local
+
+# 3. Start all services
+scripts/startup.sh
+```
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Demo app | http://localhost:9000 | Document classification UI |
+| MLflow | http://localhost:5050 | Experiment tracking (all training runs) |
+| Evidently | http://localhost:8080 | Feature drift dashboard |
+| Seq | http://localhost:5341 | Structured inference log viewer |
+
+Stop everything: `scripts/startup.sh --stop`
+
+## Models Served in the App
+
+| Model | Checkpoint | ID Acc | OOD Acc |
+|-------|-----------|--------|---------|
+| CNN Baseline (ResNet-50) | `best_model_resnet50_03.pt` | 89.47% | 62.08% |
+| Inductive GCN | `inductive_gcn_320k.pt` | 86.57% | 73.95% |
+| Fusion GraphSAGE | `fusion_gnn_feat_knn_best.pt` | 88.47% | 67.07% |
+| Multimodal GAT | `best_gat_multimodal_k8_L2.pt` | 89.55% | — |
 
 ## Reference Materials
-- `docs/EDL-Group1-Project-Proposal.docx` — Project proposal (objective, dataset, deliverables)
-- `docs/Project Instructions-updated Rubrics.pdf` — Course instructions and grading rubrics
-- `reference/RVL-CDIP_ResNet50.ipynb` — Reference notebook for ResNet-50 on RVL-CDIP
 
 ---
 

@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The GraphSAGE model must demonstrate whether graph-based spatial reasoning improves document classification over CNN-only baselines — with clear, reproducible evidence.
-**Current focus:** Phase 2.2 - Text-Aware Hybrid GNN
+**Current focus:** Phase 7 complete — Seq structured logging observability
 
 ## Current Position
 
-Phase: 2.2 of 4 (Text-Aware Hybrid GNN)
-Plan: 1 of TBD (completed)
-Status: In progress
-Last activity: 2026-03-30 — Completed 02.2-01-PLAN.md (text density extraction + text-aware graph + TextAwareGraphSAGE)
+Phase: 7 of 7 (Seq Structured Logging + Observability)
+Plan: 4 of 4 (completed: 01, 02, 03, 04)
+Status: Phase complete
+Last activity: 2026-04-17 — Completed 07-04-PLAN.md (inference-layer structured events)
 
-Progress: [█████░░░░░] ~45%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 8min
-- Total execution time: 0.4 hours
+- Total plans completed: 9
+- Average duration: 6min
+- Total execution time: 0.9 hours
 
 **By Phase:**
 
@@ -30,10 +30,12 @@ Progress: [█████░░░░░] ~45%
 | 01-notebook-foundation-data-features | 1 | 12min | 12min |
 | 02.1-hybrid-fusion-positional-encoding | 2 | 6min | 3min |
 | 02.2-text-aware-hybrid-gnn | 1 | 7min | 7min |
+| 05-demo-application-classification-page | 5 | 24min | 5min |
+| 07-seq-structured-logging-observability | 4 | 10min | 2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 12min, 4min, 7min
-- Trend: Stable ~7min
+- Last 5 plans: 8min, 1min, 6min, 2min, 1min
+- Trend: Stable ~4min
 
 *Updated after each plan completion*
 
@@ -58,10 +60,52 @@ Recent decisions affecting current work:
 - **[02.2-01]** Raw DBNet probability map (return_model_output=True) over bounding-box reconstruction for text density
 - **[02.2-01]** MPS falls back to CPU for doctr inference (doctr lacks MPS support)
 - **[02.2-01]** TextAwareGraphSAGE as independent class (not subclass of HybridGraphSAGE) for independent evolution
+- **[05-01]** exp26 text_gate is plain nn.Linear with sigmoid in forward (not Sequential) per checkpoint keys
+- **[05-01]** exp27 attn_key uses bias=False per checkpoint lacking attn_key.bias
+- **[05-01]** torch_geometric.utils.scatter used instead of torch_scatter (not installed, same API)
+- **[05-02]** Starlette 1.0 TemplateResponse uses keyword args (request=, name=) not positional
+- **[05-02]** Tailwind CDN with inline config for MD3 color tokens rather than build step
+- **[05-02]** HTMX form with hx-post for classify, targeting #results div
+- **[05-03]** needs_pe flag on ModelSpec to distinguish raw CNN (2048) vs PE-augmented (2050) node features
+- **[05-03]** Feature extractor built from fine-tuned checkpoint, not pretrained ImageNet weights
+- **[05-03]** OCR-dependent models return placeholder result when tesseract unavailable
+- **[05-04]** matplotlib.use('Agg') at module top before any pyplot imports for server-safe rendering
+- **[05-04]** CSS grid with opacity mapping for text density/node importance (no matplotlib overhead)
+- **[05-04]** Inline SVG for graph topology (embeddable via Jinja2 safe filter)
+- **[05-05]** jinja2-fragments Jinja2Blocks for block_name HTMX partial rendering
+- **[05-05]** Template split into 4 include partials for maintainability
+- **[05-05]** Device detection in main.py lifespan (MPS -> CUDA -> CPU) independent of src.config.Config
+- **[06-01]** sqlite3 stdlib only for monitoring store — no ORM dependency
+- **[06-01]** One row per model per request — enables per-model drift tracking independently
+- **[06-01]** Monitoring failure is non-fatal (try/except + warning log) — inference must not break on DB write failure
+- **[06-01]** EVIDENTLY_DASHBOARD_URL env var drives redirect; empty string triggers fallback HTML page
+- **[06-01]** sample_type column distinguishes "sample" vs "upload" for drift segmentation
+- **[06-02]** DataDriftPreset omitted when reference absent; DataSummaryPreset always runs
+- **[06-02]** Timestamp column must be converted to pd.datetime(utc=True) before passing to Evidently drift metrics
+- **[06-02]** Unlabeled report omits MulticlassClassification block; labeled report adds it only when target column present
+- **[06-03]** correct=true writes target=predicted_label; correct=false is no-op (NULL more honest than guessing true label)
+- **[06-03]** hx-vals uses string "true"/"false" not JSON boolean; route normalises via .lower() check
+- **[06-03]** request_id lifted before monitoring try/except to guarantee availability in template context
+- **[07-01]** SEQ_SERVER_URL default is empty string (disables ingestion non-fatally) — same pattern as EVIDENTLY_DASHBOARD_URL
+- **[07-01]** SEQ_SERVER_URL=http://seq:80 inside Docker compose network; http://localhost:5341 from host (different URLs for same service)
+- **[07-01]** ACCEPT_EULA: Y mandatory in datalust/seq environment block — container exits without it
+- **[07-02]** SeqLogHandler(server_url, api_key, batch_size=10, auto_flush_timeout=2) — api_key param confirmed valid in seqlog 0.4.3; no fallback to log_to_seq() needed
+- **[07-02]** Processor chain: merge_contextvars → add_log_level → add_logger_name → TimeStamper(iso/utc) → StackInfoRenderer → UnicodeDecoder; terminal: remove_processors_meta + JSONRenderer
+- **[07-02]** LoggingMiddleware registered before CORSMiddleware — outermost in Starlette stack (confirmed via app.user_middleware)
+- **[07-02]** clear_contextvars() in dispatch() clears ALL contextvars including environment; must re-bind environment after clearing
+- **[07-03]** request_id is required kwarg on _build_result_context (no default) — enforces caller supply, prevents silent dual-UUID split
+- **[07-03]** image_width/image_height bound AFTER image load (not in request.received) — dimensions unknown at handler entry
+- **[07-03]** request.failed emitted on ALL early-exit paths so failures are always observable in Seq
+- **[07-03]** Observability nav item uses SEQ_UI_URL env var (default http://localhost:5341) with target=_blank
+- **[07-04]** model_id uses InferenceResult.model_name (slug), not display_name — machine-parseable in Seq queries
+- **[07-04]** model_id is always a keyword argument on log.info(), never embedded in the message string
+- **[07-04]** GNN loop wrapped in try/except at _run_single_model call site — gives access to spec.name for model_id in failure event
+- **[07-04]** OCR-unavailable placeholder branches do not emit model.inference (skipped via continue, not false zero-confidence events)
+- **[07-04]** import logging retained at line 3; only GAT except branch logger.warning replaced
 
 ### Pending Todos
 
-- poetry.lock not regenerated via `poetry add` (SSL cert issue). Package installed in venv and declared in pyproject.toml. Run `poetry lock --no-update` in a stable network environment.
+None - poetry.lock pending from Phase 6 resolved in 07-01 (SSL did not block this run).
 
 ### Blockers/Concerns
 
@@ -69,8 +113,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-30 14:31 UTC
-Stopped at: 02.2-01-PLAN.md complete (1e31ebb)
+Last session: 2026-04-17T15:36:29Z
+Stopped at: Completed 07-04-PLAN.md (inference-layer structured events)
 Resume file: None
 
-**Note:** Baseline notebook must be re-run to regenerate cache with global_feat before hybrid notebook can be executed end-to-end. This is a prerequisite for the 02.1-02 human verification checkpoint. Phase 02.2-02 (notebook integration) is the next plan to execute.
+**Milestone status:** Phase 7 complete. All structured events live in Seq: request.received/completed/failed (route layer), graph.built (graph construction), model.inference/model.inference.failed (per-model inference). End-to-end request_id correlation across all events. Non-fatal per-model exception handling ensures pipeline resilience.

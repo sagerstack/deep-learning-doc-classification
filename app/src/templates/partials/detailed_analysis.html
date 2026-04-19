@@ -1,0 +1,60 @@
+<!-- Section 4: Detailed Model Analysis -->
+<section class="space-y-6">
+    <div class="flex items-center gap-4">
+        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-primary-container">
+            <span class="material-symbols-outlined text-on-primary-container text-sm">analytics</span>
+        </div>
+        <h2 class="font-headline font-extrabold text-2xl border-l-4 border-primary pl-4">Detailed Model Analysis</h2>
+    </div>
+    <div class="space-y-4" x-data="{ open: null }">
+        {% for detail in model_details %}
+        <div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden"
+             :class="open === {{ loop.index }} ? 'border border-primary/10' : 'border border-transparent hover:border-slate-200'"
+        >
+            <button class="w-full flex justify-between items-center p-6 transition-colors"
+                    :class="open === {{ loop.index }} ? 'bg-primary/5 hover:bg-primary/10' : 'text-slate-600'"
+                    @click="open = open === {{ loop.index }} ? null : {{ loop.index }}"
+            >
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined" :class="open === {{ loop.index }} ? 'text-primary' : ''">
+                        {% if detail.result.model_type == "GNN+OCR" %}auto_graph{% elif detail.result.model_type == "CNN" %}memory{% else %}layers{% endif %}
+                    </span>
+                    <span class="font-headline font-bold" :class="open === {{ loop.index }} ? 'text-primary' : ''">{{ detail.result.display_name }} Analysis</span>
+                </div>
+                <span class="material-symbols-outlined transition-transform" :class="open === {{ loop.index }} ? 'text-primary' : ''" x-text="open === {{ loop.index }} ? 'expand_more' : 'chevron_right'">chevron_right</span>
+            </button>
+            <div x-show="open === {{ loop.index }}" x-transition class="p-8 grid grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div>
+                        <p class="font-label text-[10px] uppercase text-slate-500 font-bold mb-4 tracking-widest">16-Class Distribution</p>
+                        <img alt="16-class probability distribution" class="w-full rounded-lg" src="data:image/png;base64,{{ detail.bar_chart_b64 }}"/>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-3 bg-surface-container-low rounded-lg">
+                            <p class="font-label text-[10px] text-slate-500 uppercase font-bold">Inference Time</p>
+                            <p class="font-label text-lg font-bold">{{ "%.2f"|format(detail.result.inference_time_ms / 1000) }}s</p>
+                        </div>
+                        <div class="p-3 bg-surface-container-low rounded-lg">
+                            <p class="font-label text-[10px] text-slate-500 uppercase font-bold">Confidence</p>
+                            <p class="font-label text-lg font-bold">{{ "%.1f"|format(detail.result.confidence * 100) }}%</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div>
+                        <p class="font-label text-[10px] uppercase text-slate-500 font-bold mb-4 tracking-widest">Post-Aggregation Importance Map</p>
+                        <div class="p-2 bg-on-background/5 rounded-lg border border-outline-variant/20">
+                            {{ detail.node_importance_html | safe }}
+                        </div>
+                    </div>
+                    <div class="bg-primary p-4 rounded-xl text-white">
+                        <p class="font-label text-[10px] uppercase opacity-70 font-bold">Architecture</p>
+                        <p class="font-headline font-bold text-sm">{{ detail.result.display_name }}</p>
+                        <p class="font-label text-[10px] uppercase opacity-50 mt-1">{{ detail.result.model_type }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>

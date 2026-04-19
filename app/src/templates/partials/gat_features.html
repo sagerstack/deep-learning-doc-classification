@@ -1,0 +1,67 @@
+<!-- Section 2: GAT Multimodal -->
+{% if gat_doc_graph_html %}
+<section class="space-y-6">
+    <div class="flex items-center gap-4">
+        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-secondary-container">
+            <span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+        </div>
+        <h2 class="font-headline font-extrabold text-2xl border-l-4 border-primary pl-4">GAT Multimodal Document Graph
+            {% for r in results %}
+                {% if r.model_name == "multimodal_gat" %}
+                <span class="text-sm font-label text-slate-400 font-normal ml-2">{{ "%.1f"|format(r.inference_time_ms / 1000) }}s</span>
+                {% endif %}
+            {% endfor %}
+        </h2>
+    </div>
+
+    <!-- Graph + OCR side by side -->
+    <div class="grid grid-cols-[3fr_2fr] gap-4 items-start">
+        <!-- Interactive Plotly document graph -->
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm">
+            <p class="font-label text-[10px] uppercase text-slate-500 font-bold mb-3 tracking-widest">Document Graph (YOLO Regions + k-NN Edges) — hover nodes for details</p>
+            <div class="w-full overflow-x-auto">
+                {{ gat_doc_graph_html | safe }}
+            </div>
+        </div>
+
+        <!-- OCR text per region -->
+        {% if gat_regions %}
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm">
+            <p class="font-label text-[10px] uppercase text-slate-500 font-bold mb-3 tracking-widest">OCR Text per Region</p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs font-label">
+                    <thead>
+                        <tr class="border-b border-slate-200">
+                            <th class="text-left py-1.5 pr-4 text-slate-400 font-bold w-6">#</th>
+                            <th class="text-left py-1.5 pr-4 text-slate-400 font-bold w-28">Region</th>
+                            <th class="text-left py-1.5 text-slate-400 font-bold">Extracted Text</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for region in gat_regions %}
+                        <tr class="border-b border-slate-100 hover:bg-slate-50">
+                            <td class="py-1.5 pr-4 text-slate-400">{{ loop.index }}</td>
+                            <td class="py-1.5 pr-4">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-sm flex-shrink-0" style="background-color: {{ region.color }};"></span>
+                                    <span class="text-slate-600">{{ region.class_name }}</span>
+                                </span>
+                            </td>
+                            <td class="py-1.5 text-slate-500 max-w-[12rem] break-words">
+                                {% if region.ocr_text %}{{ region.ocr_text[:120] }}{% if region.ocr_text | length > 120 %}…{% endif %}{% else %}<span class="italic text-slate-300">no text detected</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <p class="font-body text-sm text-slate-600 bg-surface-container-low p-4 rounded-lg">
+        <span class="material-symbols-outlined text-primary align-middle mr-2">info</span>
+        YOLO DocLayNet detects semantic document regions. Each node carries <span class="font-label font-bold text-primary">2048-dim</span> ResNet visual features, <span class="font-label font-bold text-primary">384-dim</span> MiniLM text embeddings, bounding box position, and layout class. The ★ global node aggregates the full page.
+    </p>
+</section>
+{% endif %}

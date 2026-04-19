@@ -1,0 +1,114 @@
+<!-- Section 3: Model Predictions -->
+<section class="space-y-6">
+    <div class="flex items-center gap-4">
+        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-secondary-container">
+            <span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+        </div>
+        <h2 class="font-headline font-extrabold text-2xl border-l-4 border-primary pl-4">Model Predictions <span class="text-sm font-label text-slate-400 font-normal ml-2">{{ "%.1f"|format(total_time_ms / 1000) }}s</span></h2>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left font-body text-sm">
+            <thead class="bg-surface-container-low font-label uppercase text-[10px] tracking-widest text-slate-500">
+                <tr>
+                    <th class="px-6 py-4">Model</th>
+                    <th class="px-6 py-4">Type</th>
+                    <th class="px-6 py-4">Predicted Class</th>
+                    <th class="px-6 py-4">Confidence</th>
+                    <th class="px-6 py-4">Correct?</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for r in results %}
+                <tr{% if loop.first %} class="bg-primary/5"{% endif %}>
+                    <td class="px-6 py-4 {% if loop.first %}font-bold text-primary{% else %}font-semibold{% endif %}">{{ r.display_name }}</td>
+                    <td class="px-6 py-4">
+                        {% if r.model_type == "GNN+OCR" %}
+                        <span class="bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-label uppercase">{{ r.model_type }}</span>
+                        {% elif r.model_type == "CNN" %}
+                        <span class="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-label uppercase">{{ r.model_type }}</span>
+                        {% else %}
+                        <span class="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-label uppercase">{{ r.model_type }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">{{ r.predicted_class }}</td>
+                    <td class="px-6 py-4 font-label {% if loop.first %}font-bold text-primary{% else %}font-bold{% endif %}">{{ "%.1f"|format(r.confidence * 100) }}%</td>
+                    <td class="px-6 py-4">
+                        {% set fb = auto_feedback[r.model_name] if auto_feedback is defined and r.model_name in auto_feedback else none %}
+                        {% if fb is not none %}
+                        {# Auto-detected from filename — show badge + collapsed override #}
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex items-center gap-1.5">
+                                {% if fb %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-label font-bold uppercase bg-green-100 text-green-700">
+                                    <span class="material-symbols-outlined text-[12px]">check_circle</span> Auto: Correct
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-label font-bold uppercase bg-red-100 text-red-700">
+                                    <span class="material-symbols-outlined text-[12px]">cancel</span> Auto: Incorrect
+                                </span>
+                                {% endif %}
+                                <span class="text-[9px] text-slate-400 font-label">({{ true_label }})</span>
+                            </div>
+                            {# Override toggle — always available #}
+                            <div class="flex gap-1 items-center">
+                                <span class="text-[9px] text-slate-400 font-label mr-0.5">Override:</span>
+                                <button
+                                    hx-post="/label"
+                                    hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "true", "sample_set": "{{ sample_set }}", "true_label": "{{ true_label }}", "predicted_class": "{{ r.predicted_class }}"}'
+                                    hx-target="closest td"
+                                    hx-swap="innerHTML"
+                                    class="flex items-center justify-center w-6 h-6 rounded-full hover:bg-green-100 transition-colors group"
+                                    title="Override: mark as correct"
+                                >
+                                    <span class="material-symbols-outlined text-red-300 group-hover:text-green-600 text-base">thumb_up</span>
+                                </button>
+                                <button
+                                    hx-post="/label"
+                                    hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "false", "sample_set": "{{ sample_set }}", "true_label": "{{ true_label }}", "predicted_class": "{{ r.predicted_class }}"}'
+                                    hx-target="closest td"
+                                    hx-swap="innerHTML"
+                                    class="flex items-center justify-center w-6 h-6 rounded-full hover:bg-red-100 transition-colors group"
+                                    title="Override: mark as incorrect"
+                                >
+                                    <span class="material-symbols-outlined text-red-300 group-hover:text-red-500 text-base">thumb_down</span>
+                                </button>
+                            </div>
+                        </div>
+                        {% else %}
+                        {# No confident label from filename — manual only #}
+                        <div class="flex gap-2">
+                            <button
+                                hx-post="/label"
+                                hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "true", "sample_set": "{{ sample_set }}", "true_label": "", "predicted_class": "{{ r.predicted_class }}"}'
+                                hx-target="closest td"
+                                hx-swap="innerHTML"
+                                class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-green-100 transition-colors group"
+                                title="Mark as correct"
+                            >
+                                <span class="material-symbols-outlined text-slate-300 group-hover:text-green-600 text-xl">thumb_up</span>
+                            </button>
+                            <button
+                                hx-post="/label"
+                                hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "false", "sample_set": "{{ sample_set }}", "true_label": "", "predicted_class": "{{ r.predicted_class }}"}'
+                                hx-target="closest td"
+                                hx-swap="innerHTML"
+                                class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-red-100 transition-colors group"
+                                title="Mark as incorrect"
+                            >
+                                <span class="material-symbols-outlined text-slate-300 group-hover:text-red-500 text-xl">thumb_down</span>
+                            </button>
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if top3_bars_html %}
+    <div class="bg-surface-container-low p-6 rounded-xl space-y-4">
+        <p class="font-label text-[10px] uppercase text-slate-500 font-bold tracking-widest">Top-3 Probability Distribution (Best Model: {{ results[0].display_name }})</p>
+        {{ top3_bars_html | safe }}
+    </div>
+    {% endif %}
+</section>

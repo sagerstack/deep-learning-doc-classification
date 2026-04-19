@@ -2,7 +2,7 @@
 
 ## Overview
 
-This roadmap delivers a complete GraphSAGE-based document classification system on RVL-CDIP, structured as an incrementally-built Jupyter notebook across four phases: building notebook sections for data loading and feature extraction, adding graph construction and model definitions, extending with training and evaluation infrastructure, and completing with ablation studies and final analysis.
+This roadmap delivers a complete GraphSAGE-based document classification system on RVL-CDIP, structured as an incrementally-built notebook workflow plus a demo application and lightweight monitoring layer: building notebook sections for data loading and feature extraction, adding graph construction and model definitions, extending with training and evaluation infrastructure, completing ablation studies, shipping a FastAPI demo, and adding Evidently-based model monitoring for the served app.
 
 ## Phases
 
@@ -18,6 +18,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2.2: Text-Aware Hybrid GNN** (INSERTED) - Add text density features to graph nodes for text-aware document classification
 - [ ] **Phase 3: Notebook Completion - Training & Evaluation** - Notebook sections: training loop, evaluation metrics, comparison plots, failure analysis
 - [ ] **Phase 4: Notebook Finalization - Ablation Studies** - Notebook sections: ablation experiments, results tables, RVL-CDIP-N evaluation
+- [ ] **Phase 5: Demo Application - Classification Page** - Build a FastAPI web application (Page 1: Classification Demo) that lets a presenter upload/select a document image and see CNN feature extraction, graph construction visualization, and side-by-side model predictions in real-time
+- [x] **Phase 6: Model Performance Monitoring** - Add Evidently-based monitoring, per-model inference logging, and a dashboard link from the demo UI
 
 ## Phase Details
 
@@ -119,10 +121,74 @@ Plans:
 Plans:
 - [ ] TBD after planning
 
+### Phase 5: Demo Application - Classification Page
+**Goal**: Build a FastAPI web application (Page 1: Classification Demo) that lets a presenter upload/select a document image and see CNN feature extraction, graph construction visualization, and side-by-side model predictions in real-time
+**Depends on**: Trained model checkpoints (already exist), src/ pipeline modules (features.py, graph.py, model.py, ocr_features.py)
+**Requirements**: DEP-01, DEP-03, DEP-04, DEP-05, DEP-06
+**Stack**: FastAPI + Jinja2 + HTMX + Alpine.js + Tailwind CSS (MD3 tokens). Code under app/src/, tests under app/tests/
+**Success Criteria** (what must be TRUE):
+  1. FastAPI app serves the classification demo page at localhost with Stitch-derived UI
+  2. Presenter can upload a custom image or click one of 5 preloaded sample documents
+  3. CNN feature extraction runs and displays activation heatmap + text density map
+  4. Graph construction runs and displays side-by-side grid vs k-NN graph visualizations with stats
+  5. All available model checkpoints run inference and populate a comparison table sorted by confidence
+  6. Detailed model analysis accordion expands per-model with 16-class probability distribution and node importance heatmap
+  7. Full pipeline completes in under 10 seconds on presenter's laptop
+**Plans**: 6 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Promote missing model classes + graph functions to src/
+- [ ] 05-02-PLAN.md — Install web deps + FastAPI app scaffolding
+- [ ] 05-03-PLAN.md — Model registry + inference pipeline
+- [ ] 05-04-PLAN.md — Visualization service (heatmaps, SVGs, charts)
+- [ ] 05-05-PLAN.md — Templates + routes + HTMX wiring
+- [ ] 05-06-PLAN.md — Sample images, route tests, end-to-end verification
+
+### Phase 6: Model Performance Monitoring
+**Goal**: Add lightweight model performance monitoring for the FastAPI demo using Evidently, with one structured inference log row per model prediction, periodic per-model monitoring reports, and a sidebar route to the monitoring dashboard
+**Depends on**: Phase 5
+**Requirements**: DEP-07, MON-01, MON-02, MON-03, MON-04, MON-05
+**Stack**: FastAPI + SQLite + pandas + Evidently, with dashboard URL configured by env var and batch monitoring run outside the request path
+**Success Criteria** (what must be TRUE):
+  1. Every `/classify` request persists one durable monitoring row per model prediction with request_id, model_id, confidence, probabilities, latencies, and input metadata
+  2. The web app sidebar includes a "Model Performance" entry that routes to `/model-performance`, which redirects to the configured Evidently dashboard URL
+  3. A monitoring batch job reads logged events, groups by model_id, and generates one Evidently report per model per batch window
+  4. Unlabeled monitoring captures class distribution drift, confidence shifts, latency drift, and OCR/text-density availability rates per model
+  5. Labeled monitoring can be enabled later without changing the logging schema by adding target labels to the same event store
+  6. Monitoring setup is documented and runnable locally through a script or scheduled job outside the FastAPI request path
+**Plans**: 3 plans
+
+Plans:
+- [x] 06-01-PLAN.md — Structured inference logging + dashboard route/sidebar link
+- [x] 06-02-PLAN.md — Evidently batch job + per-model reports + setup docs
+- [x] 06-03-PLAN.md — Gap closure: top-nav repoint + thumbs-up/down label capture + target DDL regression tests
+
+### Phase 7: Seq Structured Logging & Observability
+**Goal**: Implement Seq as the central observability platform for the demo app — structured JSON logs for every user action, API call, and model interaction, with each model identifiable by name in every log event, wired into Docker Compose alongside the app, and linked from the existing Observability nav item in the title bar
+**Depends on**: Phase 6
+**Requirements**: OBS-01, OBS-02, OBS-03, OBS-04
+**Stack**: Seq (Docker), structlog (Python structured logging), FastAPI middleware, Docker Compose service
+**Success Criteria** (what must be TRUE):
+  1. Seq runs as a Docker Compose service alongside the app and is reachable at localhost:5341 (UI) / localhost:5341 (ingestion)
+  2. Every `/classify` request produces structured log events covering: request received, image metadata, per-model inference start/end with model name + latency + top prediction + confidence, graph construction timing, and request complete with total latency
+  3. Every sample image click and file upload produces a structured user action log event with action type and metadata
+  4. Model name is a first-class structured field (not embedded in a message string) on every model-related log event, enabling per-model filtering in Seq
+  5. All log events include request_id for end-to-end trace correlation across the full pipeline
+  6. The Observability nav item in the title bar links to the Seq UI (localhost:5341)
+  7. Logs are descriptive enough to troubleshoot any inference failure without reading source code
+**Plans**: 5 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Seq Docker service + config env vars + structlog/seqlog dependencies
+- [ ] 07-02-PLAN.md — structlog + seqlog configure_logging() + request_id middleware wired into main.py
+- [ ] 07-03-PLAN.md — Route-level events (request.received/completed/failed) + Observability nav repoint to Seq UI
+- [ ] 07-04-PLAN.md — Inference-layer events (graph.built, model.inference, model.inference.failed)
+- [ ] 07-05-PLAN.md — End-to-end human verification of the full observability trail in Seq UI
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -132,3 +198,6 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4
 | 2.2. Text-Aware Hybrid GNN | 0/2 | Planning complete | - |
 | 3. Notebook Completion - Training & Evaluation | 0/TBD | Not started | - |
 | 4. Notebook Finalization - Ablation Studies | 0/TBD | Not started | - |
+| 5. Demo Application - Classification Page | 0/6 | Planning complete | - |
+| 6. Model Performance Monitoring | 3/3 | Complete | 2026-04-14 |
+| 7. Seq Structured Logging & Observability | 0/5 | Planning complete | - |

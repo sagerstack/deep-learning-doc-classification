@@ -1,6 +1,6 @@
-# Local Mac — full dataset on external drive
+# Local Mac — full dataset cached in repo-local directories
 DATA_MODE=full
-HF_CACHE_DIR=/Volumes/sp-ext/rvl-cdip/hf_cache
-CACHE_DIR=/Volumes/sp-ext/rvl-cdip/cached_features
+HF_CACHE_DIR=./.hf_cache_full
+CACHE_DIR=./.hf_cache_full/cached_features
 BATCH_SIZE=32
 NUM_WORKERS=0

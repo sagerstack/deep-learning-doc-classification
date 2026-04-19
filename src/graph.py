@@ -93,6 +93,69 @@ def build_graph_dataset(
     return graphs
 
 
+def feature_map_to_graph_feature_knn(
+    features: torch.Tensor,
+    label: int,
+    k: int = 8,
+) -> Data:
+    """Convert spatial feature map to PyG Data using feature-space k-NN edges.
+
+    Unlike grid-based construction where every image gets the same edge topology,
+    this connects nodes whose CNN features are most similar. Each document gets
+    a unique graph structure reflecting its content layout.
+
+    Experiment 3: Tests whether document-specific graph topology outperforms
+    fixed grid edges for classification.
+
+    Args:
+        features: Spatial features [C, H, W] — e.g., [2048, 7, 7]
+        label: Integer class label
+        k: Number of nearest neighbors per node in feature space
+
+    Returns:
+        PyG Data(x=[num_nodes, C], edge_index=[2, num_edges], y=[1])
+    """
+    c, h, w = features.shape
+    x = features.reshape(c, h * w).T  # [H*W, C]
+    y = torch.tensor([label], dtype=torch.long)
+
+    # Build k-NN edges in feature space using pairwise cosine distance
+    # Pure torch implementation — no torch-cluster dependency needed for 49 nodes
+    x_norm = x / (x.norm(dim=1, keepdim=True) + 1e-8)
+    sim = x_norm @ x_norm.T  # [N, N] cosine similarity
+    sim.fill_diagonal_(-float('inf'))  # exclude self-loops
+    _, topk_indices = sim.topk(k, dim=1)  # [N, k] nearest neighbors
+
+    sources = torch.arange(x.shape[0]).unsqueeze(1).expand_as(topk_indices).flatten()
+    targets = topk_indices.flatten()
+    edge_index = torch.stack([sources, targets], dim=0)
+
+    return Data(x=x, edge_index=edge_index, y=y)
+
+
+def build_graph_dataset_feature_knn(
+    cached_features: List[Dict],
+    k: int = 8,
+) -> List[Data]:
+    """Convert cached features into PyG Data objects with feature-space k-NN edges.
+
+    Each document gets a unique graph topology based on CNN feature similarity
+    between spatial regions. No shared edge_index — edges are per-document.
+
+    Args:
+        cached_features: List of dicts with "features" [C, H, W] and "label" int
+        k: Number of nearest neighbors per node
+
+    Returns:
+        List of PyG Data objects with document-specific edge structures
+    """
+    graphs = []
+    for item in cached_features:
+        graph = feature_map_to_graph_feature_knn(item["features"], item["label"], k=k)
+        graphs.append(graph)
+    return graphs
+
+
 def add_positional_encoding_2d(x: torch.Tensor, grid_h: int = 7, grid_w: int = 7) -> torch.Tensor:
     """Append normalized 2D positional encoding to node features.
 
@@ -259,3 +322,95 @@ def build_graph_dataset_text_aware(
         )
         graphs.append(graph)
     return graphs
+
+
+def feature_map_to_graph_fusion_knn(
+    features: torch.Tensor,
+    global_feat: torch.Tensor,
+    label: int,
+    k: int = 8,
+) -> Data:
+    """Convert spatial feature map to PyG Data with feature-space k-NN edges and global_feat.
+
+    Used by Exp16 Fusion GraphSAGE. Raw CNN features as nodes (no PE), cosine-similarity
+    k-NN edges, and global_feat stored separately for concat fusion.
+
+    Args:
+        features: Spatial features [C, H, W] — e.g., [2048, 7, 7]
+        global_feat: Global features [C] — e.g., [2048] from avgpool
+        label: Integer class label
+        k: Number of nearest neighbors per node in feature space
+
+    Returns:
+        PyG Data(x=[H*W, C], edge_index=[2, num_edges], y=[1], global_feat=[1, C])
+    """
+    c, h, w = features.shape
+    x = features.reshape(c, h * w).T  # [H*W, C]
+    y = torch.tensor([label], dtype=torch.long)
+
+    x_norm = x / (x.norm(dim=1, keepdim=True) + 1e-8)
+    sim = x_norm @ x_norm.T
+    sim.fill_diagonal_(-float('inf'))
+    _, topk_indices = sim.topk(k, dim=1)
+
+    sources = torch.arange(x.shape[0]).unsqueeze(1).expand_as(topk_indices).flatten()
+    targets = topk_indices.flatten()
+    edge_index = torch.stack([sources, targets], dim=0)
+
+    data = Data(x=x, edge_index=edge_index, y=y)
+    data.global_feat = global_feat.unsqueeze(0)  # [1, C]
+    return data
+
+
+def feature_map_to_graph_gated_boc(
+    features: torch.Tensor,
+    global_feat: torch.Tensor,
+    ocr_boc: torch.Tensor,
+    label: int,
+    k: int = 8,
+) -> Data:
+    """Convert spatial feature map to PyG Data with separate BoC features for gated fusion.
+
+    Constructs a graph with feature-space k-NN edges where BoC features are stored
+    as a separate attribute (x_boc) rather than concatenated into node features.
+    This allows GatedBoCGraphSAGE to apply learned gating on the text signal.
+
+    Args:
+        features: Spatial features [C, H, W] -- e.g., [2048, 7, 7] from ResNet-50 layer4
+        global_feat: Global features [C] -- e.g., [2048] from ResNet-50 avgpool
+        ocr_boc: Bag-of-Characters features [H*W, boc_dim] -- e.g., [49, 70]
+        label: Integer class label
+        k: Number of nearest neighbors per node in feature space
+
+    Returns:
+        PyG Data with:
+            x: Node features [H*W, C+2] (CNN features + 2D positional encoding)
+            edge_index: Feature-space k-NN edges [2, num_edges]
+            y: Label [1]
+            global_feat: [1, C]
+            x_boc: [H*W, boc_dim] separate BoC features
+    """
+    c, h, w = features.shape
+
+    # Reshape to node features [H*W, C]
+    x = features.reshape(c, h * w).T
+
+    # Add positional encoding -> [H*W, C+2]
+    x = add_positional_encoding_2d(x, grid_h=h, grid_w=w)
+
+    # Build k-NN edges in feature space using pairwise cosine distance
+    x_norm = x / (x.norm(dim=1, keepdim=True) + 1e-8)
+    sim = x_norm @ x_norm.T
+    sim.fill_diagonal_(-float('inf'))
+    _, topk_indices = sim.topk(k, dim=1)
+
+    sources = torch.arange(x.shape[0]).unsqueeze(1).expand_as(topk_indices).flatten()
+    targets = topk_indices.flatten()
+    edge_index = torch.stack([sources, targets], dim=0)
+
+    y = torch.tensor([label], dtype=torch.long)
+    data = Data(x=x, edge_index=edge_index, y=y)
+    data.global_feat = global_feat.unsqueeze(0)
+    data.x_boc = ocr_boc
+
+    return data
