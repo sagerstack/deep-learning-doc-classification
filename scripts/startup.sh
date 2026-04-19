@@ -23,14 +23,16 @@ EVIDENTLY_PORT=8080
 EVIDENTLY_WORKSPACE="$PROJECT_ROOT/monitoring/evidently_workspace"
 EVIDENTLY_PIDFILE="/tmp/evidently-doc-classification.pid"
 REFERENCE_PARQUET="$PROJECT_ROOT/monitoring/reference/reference_dataset.parquet"
+GCN_FEATURE_BANK="$PROJECT_ROOT/app/src/data/gcn_feature_bank.pt"
+MLFLOW_PORT=5050
+MLFLOW_DB="$PROJECT_ROOT/monitoring/mlflow/mlflow.db"
+MLFLOW_PIDFILE="/tmp/mlflow-doc-classification.pid"
 
 MODELS=(
-    "exp14b_finetuned_resnet50_cnn.pt"
-    "exp16_fusion_featknn_graphsage.pt"
-    "exp23_gat_fusion.pt"
-    "exp25_boc_sage.pt"
-    "exp26_gated_boc.pt"
-    "exp27_attn_pool.pt"
+    "best_model_resnet50_03.pt"
+    "fusion_gnn_feat_knn_best.pt"
+    "inductive_gcn_320k.pt"
+    "best_gat_multimodal_k8_L2.pt"
 )
 
 # ── Flags ─────────────────────────────────────────────────────────────────────
@@ -111,13 +113,13 @@ load_env_file() {
 validate_models() {
     local missing=0
     for model in "${MODELS[@]}"; do
-        if [ ! -f "$PROJECT_ROOT/models/$model" ]; then
-            echo "WARNING: Missing model checkpoint: models/$model"
+        if [ ! -f "$PROJECT_ROOT/final-models/$model" ]; then
+            echo "WARNING: Missing model checkpoint: final-models/$model"
             missing=$((missing + 1))
         fi
     done
     if [ "$missing" -gt 0 ]; then
-        echo "ERROR: $missing model checkpoint(s) missing. Place them in models/ before startup."
+        echo "ERROR: $missing model checkpoint(s) missing. Place them in final-models/ before startup."
         exit 1
     fi
 }
@@ -133,6 +135,21 @@ ensure_monitoring_dirs() {
         echo "         Generate it with:"
         echo "         poetry run python scripts/monitoring/bootstrap_reference.py --synthetic"
     fi
+}
+
+build_gcn_feature_bank_if_missing() {
+    if [ -f "$GCN_FEATURE_BANK" ]; then
+        echo "==> GCN feature bank present ($GCN_FEATURE_BANK)"
+        return
+    fi
+    echo "==> GCN feature bank missing — building (one-time, ~2 min)"
+    cd "$PROJECT_ROOT"
+    if ! poetry run python scripts/build_gcn_feature_bank.py; then
+        echo "ERROR: Failed to build GCN feature bank. The Inductive GCN model"
+        echo "       requires this bank to produce correct predictions."
+        exit 1
+    fi
+    echo "    GCN feature bank built"
 }
 
 wait_for_app() {
@@ -210,6 +227,71 @@ stop_evidently() {
     fi
 }
 
+# ── MLflow UI server ──────────────────────────────────────────────────────────
+mlflow_is_running() {
+    if [ -f "$MLFLOW_PIDFILE" ]; then
+        local pid
+        pid=$(cat "$MLFLOW_PIDFILE")
+        if kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+start_mlflow() {
+    mkdir -p "$(dirname "$MLFLOW_DB")"
+
+    echo "==> Populating MLflow experiment store from .lab/results.tsv"
+    cd "$PROJECT_ROOT"
+    PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python \
+        poetry run python scripts/populate_mlflow.py \
+        --tracking-uri "sqlite:///${MLFLOW_DB}" \
+        > /tmp/mlflow-populate-doc-classification.log 2>&1 \
+        && echo "    MLflow populated ($(grep 'logged exp' /tmp/mlflow-populate-doc-classification.log | wc -l | tr -d ' ') runs)" \
+        || echo "  WARNING: MLflow populate failed — check /tmp/mlflow-populate-doc-classification.log"
+
+    if mlflow_is_running; then
+        echo "==> MLflow UI already running (PID $(cat "$MLFLOW_PIDFILE"))"
+        return
+    fi
+
+    echo "==> Starting MLflow UI server on port ${MLFLOW_PORT}"
+    PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python \
+        poetry run mlflow ui \
+        --backend-store-uri "sqlite:///${MLFLOW_DB}" \
+        --host 0.0.0.0 \
+        --port "$MLFLOW_PORT" \
+        > /tmp/mlflow-doc-classification.log 2>&1 &
+
+    echo $! > "$MLFLOW_PIDFILE"
+    echo "    PID $(cat "$MLFLOW_PIDFILE") — logs: tail /tmp/mlflow-doc-classification.log"
+
+    local attempts=0
+    until curl -sf "http://localhost:${MLFLOW_PORT}" >/dev/null 2>&1; do
+        sleep 1
+        attempts=$((attempts + 1))
+        if [ "$attempts" -ge 20 ]; then
+            echo "WARNING: MLflow UI did not respond after 20s — check logs:"
+            echo "         tail /tmp/mlflow-doc-classification.log"
+            return
+        fi
+    done
+    echo "    MLflow UI ready"
+}
+
+stop_mlflow() {
+    if mlflow_is_running; then
+        local pid
+        pid=$(cat "$MLFLOW_PIDFILE")
+        echo "==> Stopping MLflow UI server (PID ${pid})"
+        kill "$pid" 2>/dev/null || true
+        rm -f "$MLFLOW_PIDFILE"
+    else
+        echo "==> MLflow UI not running"
+    fi
+}
+
 run_monitoring_job() {
     echo "==> Running Evidently batch job (last 24h)"
     cd "$PROJECT_ROOT"
@@ -222,6 +304,7 @@ if [ "$STOP" -eq 1 ]; then
     echo "==> Stopping app container"
     docker compose down --remove-orphans
     stop_evidently
+    stop_mlflow
     echo ""
     echo "All services stopped."
     exit 0
@@ -241,6 +324,7 @@ ensure_env_file
 load_env_file
 validate_models
 ensure_monitoring_dirs
+build_gcn_feature_bank_if_missing
 
 # ── Start app (Docker) ────────────────────────────────────────────────────────
 if [ "$RESET" -eq 1 ]; then
@@ -253,8 +337,15 @@ echo "==> Starting app container"
 docker compose up -d --force-recreate "$APP_SERVICE"
 wait_for_app
 
+# ── Restore Seq dashboard ─────────────────────────────────────────────────────
+echo "==> Restoring Seq observability dashboard"
+poetry run python scripts/restore_seq_dashboard.py || echo "  WARNING: Seq dashboard restore failed (non-fatal)"
+
 # ── Start Evidently UI (local poetry) ─────────────────────────────────────────
 start_evidently
+
+# ── Start MLflow UI (local poetry) ────────────────────────────────────────────
+start_mlflow
 
 # ── Optional: run monitoring batch job ───────────────────────────────────────
 if [ "$RUN_MONITORING" -eq 1 ]; then
@@ -269,6 +360,7 @@ echo " Services running"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Demo app       http://localhost:${APP_PORT}"
 echo "  Drift Monitor  http://localhost:${EVIDENTLY_PORT}"
+echo "  Experiments    http://localhost:${MLFLOW_PORT}"
 echo ""
 echo "  Stop all:       scripts/startup.sh --stop"
 echo "  Push snapshots: poetry run python scripts/monitoring/run_evidently.py --window-hours 24"

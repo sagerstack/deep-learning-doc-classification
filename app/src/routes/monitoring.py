@@ -3,12 +3,14 @@
 import logging
 import sqlite3
 
+import structlog
 from fastapi import APIRouter, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.src.config import EVIDENTLY_DASHBOARD_URL, MONITORING_DB_PATH
 
 logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 router = APIRouter()
 
@@ -64,12 +66,15 @@ async def label_prediction(
     request_id: str = Form(...),
     model_id: str = Form(...),
     correct: str = Form(...),
+    sample_set: str = Form(default=""),
+    true_label: str = Form(default=""),
+    predicted_class: str = Form(default=""),
 ):
     """Capture thumbs-up/down feedback and write target label to inference_events.
 
     On correct=true: sets target = predicted_label for the matching row.
     On correct=false: no DB write (target remains NULL).
-    Returns an HTML confirmation fragment to swap into the table cell.
+    Emits a label.feedback Seq event so the accuracy dashboard reflects overrides.
     """
     if not request_id.strip() or not model_id.strip():
         return HTMLResponse(
@@ -90,6 +95,18 @@ async def label_prediction(
                 conn.commit()
         except sqlite3.Error as exc:
             logger.warning("Label write failed (non-fatal): %s", exc)
+
+    log.info(
+        "label.feedback",
+        event_type="label.feedback",
+        request_id=request_id,
+        model_id=model_id,
+        sample_set=sample_set or None,
+        true_label=true_label or None,
+        predicted_class=predicted_class or None,
+        is_correct=is_correct,
+        auto_correct_int=1 if is_correct else 0,
+    )
 
     confirmation = _CONFIRM_CORRECT_HTML if is_correct else _CONFIRM_INCORRECT_HTML
     return HTMLResponse(content=confirmation, status_code=200)

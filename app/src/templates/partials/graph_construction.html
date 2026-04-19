@@ -1,23 +1,14 @@
-<!-- Section 2: Graph Construction -->
+<!-- Section: Graph Construction -->
 <section class="space-y-6">
     <div class="flex items-center gap-4">
         <div class="flex items-center justify-center w-6 h-6 rounded-full bg-secondary-container">
             <span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
         </div>
-        <h2 class="font-headline font-extrabold text-2xl border-l-4 border-primary pl-4">Graph Construction <span class="text-sm font-label text-slate-400 font-normal ml-2">{{ "%.1f"|format(graph_time_ms / 1000) }}s</span></h2>
+        <h2 class="font-headline font-extrabold text-2xl border-l-4 border-primary pl-4">Fusion GraphSAGE <span class="text-sm font-label text-slate-400 font-normal ml-2">{{ "%.1f"|format(graph_time_ms / 1000) }}s</span></h2>
     </div>
 
-    <!-- Document overlay graphs (GVdoc style) -->
-    <div class="grid grid-cols-2 gap-6">
-        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm">
-            <div class="flex justify-between items-center mb-3">
-                <p class="font-label text-[10px] uppercase text-slate-500 font-bold tracking-widest">Spatial Grid (k=8)</p>
-                <span class="font-label text-[10px] bg-slate-100 px-2 py-0.5 rounded">LOCAL</span>
-            </div>
-            <div class="relative rounded-lg overflow-hidden">
-                <img src="data:image/png;base64,{{ grid_overlay_b64 }}" alt="Grid graph overlaid on document" class="w-full"/>
-            </div>
-        </div>
+    <!-- Feature k-NN overlay + right column (stats + commentary) -->
+    <div class="grid grid-cols-[3fr_1fr] gap-6 items-stretch">
         <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm">
             <div class="flex justify-between items-center mb-3">
                 <p class="font-label text-[10px] uppercase text-slate-500 font-bold tracking-widest">Feature k-NN (k=8)</p>
@@ -27,54 +18,27 @@
                 <img src="data:image/png;base64,{{ knn_overlay_b64 }}" alt="k-NN graph overlaid on document" class="w-full"/>
             </div>
         </div>
-    </div>
-
-    <!-- Abstract topology (collapsible) -->
-    <details class="group">
-        <summary class="cursor-pointer font-label text-[10px] uppercase text-slate-400 tracking-widest hover:text-slate-600 flex items-center gap-2">
-            <span class="material-symbols-outlined text-sm">schema</span>
-            Abstract Topology
-            <span class="material-symbols-outlined text-sm group-open:rotate-180 transition-transform">expand_more</span>
-        </summary>
-        <div class="grid grid-cols-2 gap-6 mt-4">
-            <div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col gap-4">
-                <div class="h-32 flex items-center justify-center relative">
-                    {{ grid_svg | safe }}
+        <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-3 p-4 bg-on-background/5 rounded-lg border-l-2 border-primary/30">
+                <div class="flex flex-col">
+                    <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Total Nodes</span>
+                    <span class="font-label text-xl font-bold">{{ graph_stats.num_nodes }}</span>
+                </div>
+                <div class="h-px bg-outline-variant/30"></div>
+                <div class="flex flex-col">
+                    <span class="font-label text-[10px] uppercase text-slate-500 font-bold">k-NN Edges</span>
+                    <span class="font-label text-xl font-bold">{{ graph_stats.knn_edges }}</span>
+                </div>
+                <div class="h-px bg-outline-variant/30"></div>
+                <div class="flex flex-col">
+                    <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Avg Degree</span>
+                    <span class="font-label text-xl font-bold">{{ "%.1f"|format(graph_stats.avg_degree) }}</span>
                 </div>
             </div>
-            <div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col gap-4">
-                <div class="h-32 flex items-center justify-center relative">
-                    {{ knn_svg | safe }}
-                </div>
-            </div>
-        </div>
-    </details>
-
-    <div class="flex justify-between items-center p-4 bg-on-background/5 rounded-lg border-l-2 border-primary/30">
-        <div class="flex flex-col">
-            <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Total Nodes</span>
-            <span class="font-label text-xl font-bold">{{ graph_stats.num_nodes }}</span>
-        </div>
-        <div class="w-px h-8 bg-outline-variant/30"></div>
-        <div class="flex flex-col">
-            <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Grid Edges</span>
-            <span class="font-label text-xl font-bold">{{ graph_stats.grid_edges }}</span>
-        </div>
-        <div class="w-px h-8 bg-outline-variant/30"></div>
-        <div class="flex flex-col">
-            <span class="font-label text-[10px] uppercase text-slate-500 font-bold">k-NN Edges</span>
-            <span class="font-label text-xl font-bold">{{ graph_stats.knn_edges }}</span>
-        </div>
-        <div class="w-px h-8 bg-outline-variant/30"></div>
-        <div class="flex flex-col">
-            <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Avg Degree</span>
-            <span class="font-label text-xl font-bold">{{ "%.1f"|format(graph_stats.avg_degree) }}</span>
+            <p class="font-body text-sm text-slate-600 bg-surface-container-low p-4 rounded-lg border-l-2 border-primary/30">
+                <span class="material-symbols-outlined text-primary align-middle mr-2">info</span>
+                <span class="text-red-600 font-bold">Red edges</span> connect the <span class="font-label font-bold text-primary">k=8</span> most feature-similar regions regardless of spatial position — enabling non-local reasoning across the document.
+            </p>
         </div>
     </div>
-
-    <p class="font-body text-sm text-slate-600 bg-surface-container-low p-4 rounded-lg">
-        <span class="material-symbols-outlined text-primary align-middle mr-2">info</span>
-        <span class="text-blue-600 font-bold">Blue edges</span> connect spatially adjacent grid cells (local structure).
-        <span class="text-red-600 font-bold">Red edges</span> connect feature-similar regions regardless of position (non-local reasoning).
-    </p>
 </section>

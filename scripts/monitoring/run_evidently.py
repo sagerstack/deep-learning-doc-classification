@@ -424,7 +424,11 @@ def _build_evidently_dataset(df: pd.DataFrame, *, include_target: bool) -> Datas
             name="document_class",
             target="target",
             prediction_labels="predicted_label",
-            prediction_probas=PROB_COLUMN_NAMES,
+            # Omit prediction_probas: prob column names use underscores (prob_scientific_report)
+            # but target/predicted_label use spaces ('scientific report'). Evidently derives
+            # class labels from the prob column names, producing a mismatch that causes
+            # sklearn's confusion_matrix to raise ValueError. Labels are inferred correctly
+            # from target and predicted_label when probas are omitted.
         )]
         if has_labels else None
     )

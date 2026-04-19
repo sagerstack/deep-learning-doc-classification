@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from pathlib import Path
+
 from app.src.config import (
     APP_HOST,
     APP_PORT,
@@ -16,6 +18,8 @@ from app.src.config import (
     MONITORING_DB_PATH,
     STATIC_DIR,
 )
+
+GCN_THUMBS_DIR = Path(__file__).resolve().parent / "data" / "gcn_thumbs"
 from app.src.logging_config import configure_logging
 from app.src.middleware.logging import LoggingMiddleware
 from app.src.monitoring.store import init_db
@@ -82,6 +86,8 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+if GCN_THUMBS_DIR.exists():
+    app.mount("/gcn-thumbs", StaticFiles(directory=str(GCN_THUMBS_DIR)), name="gcn-thumbs")
 
 app.include_router(classify_router)
 app.include_router(monitoring_router)

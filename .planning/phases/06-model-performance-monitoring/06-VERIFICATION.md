@@ -1,27 +1,28 @@
 ---
 phase: 06-model-performance-monitoring
-verified: 2026-04-14T00:00:00Z
-status: gaps_found
-score: 5/6 must-haves verified
-gaps:
-  - truth: "Labeled monitoring can be enabled later without changing the logging schema by adding target labels to the same event store"
-    status: failed
-    reason: "The target column is not pre-declared in the SQLite DDL. The docs describe backfilling via UPDATE statements and list target in the schema table, but ALTER TABLE would be required first. The must-have claims no schema change is needed."
-    artifacts:
-      - path: "app/src/monitoring/store.py"
-        issue: "_CREATE_TABLE_SQL does not include a target TEXT column. The batch job (run_evidently.py) checks 'target' in model_df.columns dynamically, but this column will never appear unless added via ALTER TABLE first."
-    missing:
-      - "Add 'target TEXT' column to _CREATE_TABLE_SQL DDL in store.py so it is pre-declared on first init_db() call"
-      - "Update _column_list() and _event_to_row() in store.py to include target=None at insert time (preserving existing rows via DEFAULT NULL)"
-      - "Update InferenceEvent dataclass in schema.py to include target: Optional[str] = None if schema is to be set at event-creation time"
+verified: 2026-04-14T12:00:00Z
+status: passed
+score: 7/7 must-haves verified
+re_verification:
+  previous_status: gaps_found
+  previous_score: 5/6
+  gaps_closed:
+    - "inference_events.target column pre-declared in CREATE TABLE DDL (store.py line 48) + idempotent ALTER TABLE migration in init_db()"
+    - "Top navigation bar contains 'Drift Monitoring' item routing to /model-performance (NAV_ITEMS updated in classify.py)"
+    - "Duplicate 'Model Performance' sidebar anchor removed from base.html"
+    - "Each row in Model Predictions table has thumbs-up and thumbs-down HTMX buttons in Correct? column"
+    - "POST /label route writes target=predicted_label on correct=true; no-op on correct=false"
+    - "After label POST, row cell swaps to Recorded/Noted confirmation HTML fragment"
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 6: Model Performance Monitoring Verification Report
 
-**Phase Goal:** Add lightweight model performance monitoring for the FastAPI demo using Evidently, with one structured inference log row per model prediction, periodic per-model monitoring reports, and a sidebar route to the monitoring dashboard
+**Phase Goal:** Add lightweight model performance monitoring for the FastAPI demo using Evidently, with one structured inference log row per model prediction, periodic per-model monitoring reports, and a sidebar route to the monitoring dashboard.
 **Verified:** 2026-04-14
-**Status:** gaps_found — 1 gap
-**Re-verification:** No — initial verification
+**Status:** passed
+**Re-verification:** Yes — after gap closure via 06-03 plan
 
 ## Goal Achievement
 
@@ -29,66 +30,79 @@ gaps:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Every /classify request persists one durable monitoring row per model prediction with request_id, model_id, confidence, probabilities, latencies, and input metadata | VERIFIED | classify.py lines 115-136 build InferenceEvents via build_inference_events() and call log_inference_events(events, MONITORING_DB_PATH); all required fields present in schema.py InferenceEvent dataclass and store.py DDL |
-| 2 | The web app sidebar includes a "Model Performance" entry that routes to /model-performance, which redirects to the configured Evidently dashboard URL | VERIFIED | base.html lines 209-213 have the sidebar link; routes/monitoring.py implements RedirectResponse to EVIDENTLY_DASHBOARD_URL with fallback HTML; router registered in main.py line 83 |
-| 3 | A monitoring batch job reads logged events, groups by model_id, and generates one Evidently report per model per batch window | VERIFIED | run_evidently.py build_reports_for_window() iterates current_df.groupby("model_id") and calls _run_model_reports() per model; DataSummaryPreset + DataDriftPreset used for unlabeled; ClassificationPreset for labeled |
-| 4 | Unlabeled monitoring captures class distribution drift, confidence shifts, latency drift, and OCR/text-density availability rates per model | VERIFIED | _METADATA_NUMERICAL_COLS includes confidence, total_time_ms, feature_time_ms, graph_time_ms, model_time_ms; _METADATA_CATEGORICAL_COLS includes predicted_label, ocr_available, text_density_available; DataDriftPreset applied when reference available |
-| 5 | Labeled monitoring can be enabled later without changing the logging schema by adding target labels to the same event store | FAILED | target column not pre-declared in _CREATE_TABLE_SQL DDL (store.py). Must-have requires no schema change; the actual DDL requires ALTER TABLE before any backfill UPDATE can succeed |
-| 6 | Monitoring setup is documented and runnable locally through a script or scheduled job outside the FastAPI request path | VERIFIED | docs/monitoring.md covers step-by-step local setup; bootstrap_reference.py and run_evidently.py are fully implemented with --offline mode; Docker Compose monitoring profile documented |
+| 1 | Every /classify request persists one durable monitoring row per model prediction | VERIFIED | classify.py lines 116-136; request_id generated before try/except; build_inference_events + log_inference_events called |
+| 2 | Top navigation bar contains "Drift Monitoring" item routing to /model-performance | VERIFIED | classify.py line 39: `{"key": "drift-monitoring", "label": "Drift Monitoring", "href": "/model-performance"}`; base.html renders `item.href` dynamically |
+| 3 | Duplicate "Model Performance" sidebar anchor removed | VERIFIED | base.html lines 210-218: mt-auto div contains only RVL-CDIP Dataset block; no /model-performance anchor in aside |
+| 4 | Each row in Model Predictions table renders thumbs-up and thumbs-down buttons in Correct? column | VERIFIED | model_predictions.html lines 36-57: two HTMX buttons with hx-post="/label", hx-vals scoped by request_id + r.model_name |
+| 5 | Clicking thumbs-up POSTs correct=true; server writes target=predicted_label for that (request_id, model_id) | VERIFIED | monitoring.py lines 82-90: UPDATE inference_events SET target = predicted_label WHERE request_id = ? AND model_id = ? |
+| 6 | Clicking thumbs-down leaves target NULL; after either click cell swaps to confirmation state | VERIFIED | monitoring.py line 80: correct=false is a no-op; lines 39-51: _CONFIRM_CORRECT_HTML / _CONFIRM_INCORRECT_HTML returned; hx-target="closest td" hx-swap="innerHTML" |
+| 7 | inference_events.target column pre-declared in CREATE TABLE DDL so operators can backfill without ALTER TABLE | VERIFIED | store.py line 48: `target TEXT` in _CREATE_TABLE_SQL; lines 77-80: idempotent PRAGMA-based ALTER TABLE migration in init_db() |
 
-**Score:** 5/6 truths verified
+**Score:** 7/7 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `app/src/monitoring/schema.py` | InferenceEvent dataclass + build_inference_events() | VERIFIED | 109 lines, fully substantive, exports InferenceEvent and build_inference_events; imported in classify.py and store.py |
-| `app/src/monitoring/store.py` | SQLite persistence with log_inference_events() | VERIFIED | 212 lines, fully substantive; init_db, log_inference_events, query_events, fetch_events_as_dataframe all implemented; imported in classify.py and main.py |
-| `app/src/routes/classify.py` | Event logging integrated into classification pipeline | VERIFIED | build_inference_events + log_inference_events called in _build_result_context() lines 115-136; wrapped in try/except to be non-fatal |
-| `app/src/routes/monitoring.py` | /model-performance route with redirect | VERIFIED | 41 lines; RedirectResponse when EVIDENTLY_DASHBOARD_URL set, fallback HTML otherwise; registered in main.py |
-| `app/src/templates/base.html` | Sidebar "Model Performance" entry | VERIFIED | Lines 209-213; anchor href="/model-performance" with Material icon and label |
-| `scripts/monitoring/run_evidently.py` | Batch job with build_reports_for_window() | VERIFIED | 437 lines; full Evidently SDK integration with groupby model_id; offline + cloud modes; CLI entrypoint |
-| `scripts/monitoring/bootstrap_reference.py` | Reference dataset bootstrap | VERIFIED | 252 lines; real-traffic export and synthetic generation modes; full CLI |
-| `docs/monitoring.md` | Operator documentation | VERIFIED | 200 lines; covers event schema, local usage steps, cloud publishing, labeled backfill strategy, Docker Compose profile |
+| `app/src/routes/classify.py` | NAV_ITEMS repointed; request_id in context | VERIFIED | Line 39 href=/model-performance; line 116 request_id before try/except; line 204 in returned context |
+| `app/src/routes/monitoring.py` | GET /model-performance redirect + POST /label | VERIFIED | 96 lines; both routes present, wired, substantive |
+| `app/src/templates/base.html` | Sidebar /model-performance anchor absent | VERIFIED | Lines 210-218: only RVL-CDIP Dataset block in mt-auto div; confirmed via grep (no output) |
+| `app/src/templates/partials/model_predictions.html` | HTMX thumbs-up/down buttons per row | VERIFIED | Lines 36-57: two buttons with hx-post="/label", hx-vals, hx-target="closest td", hx-swap="innerHTML" |
+| `app/src/monitoring/store.py` | target TEXT in DDL + migration | VERIFIED | Line 48: DDL column; lines 77-80: PRAGMA + ALTER TABLE migration; lines 201, 218: column_list and event_to_row include target |
+| `app/tests/test_monitoring.py` | TestLabelRoute (3 tests) + TestTargetColumnDDL (2 tests) | VERIFIED | All 5 test methods present at lines 248, 269, 290, 309 |
+| `app/tests/test_routes.py` | Top-nav and sidebar link tests | VERIFIED | test_top_nav_contains_drift_monitoring_link (line 58) + test_sidebar_does_not_contain_model_performance_link (line 66) |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `classify.py` | `monitoring/store.py` | `log_inference_events(events, MONITORING_DB_PATH)` | WIRED | Called in _build_result_context(), line 134 |
-| `classify.py` | `monitoring/schema.py` | `build_inference_events(...)` | WIRED | Called lines 119-133; all pipeline fields mapped |
-| `main.py` | `monitoring/store.py` | `init_db(MONITORING_DB_PATH)` | WIRED | Called in lifespan startup, line 41 |
-| `main.py` | `routes/monitoring.py` | `app.include_router(monitoring_router)` | WIRED | Line 83 |
-| `routes/monitoring.py` | `config.py` | `EVIDENTLY_DASHBOARD_URL` | WIRED | Imported and used in conditional redirect |
-| `run_evidently.py` | `monitoring/store.py` | `fetch_events_as_dataframe()` | WIRED | Called in build_reports_for_window() line 98 |
-| `run_evidently.py` | `monitoring/schema.py` | `PROB_COLUMN_NAMES, RVL_CDIP_LABELS` | WIRED | Imported at top of file, used in _build_evidently_dataset() |
+| `model_predictions.html` | `routes/monitoring.py` | HTMX POST /label with request_id, model_id, correct | WIRED | hx-post="/label" on both buttons; form fields match route's Form(...) parameters |
+| `routes/monitoring.py` | `monitoring/store.py` | UPDATE inference_events SET target = predicted_label | WIRED | monitoring.py lines 84-90; uses stdlib sqlite3 directly against MONITORING_DB_PATH |
+| `routes/classify.py` | `model_predictions.html` | request_id in template context dict | WIRED | classify.py line 204 `"request_id": request_id`; template uses `{{ request_id }}` in hx-vals |
+| `classify.py` | `monitoring/store.py` | log_inference_events(events, MONITORING_DB_PATH) | WIRED | Line 134; non-fatal try/except wrapper |
+| `main.py` | `routes/monitoring.py` | app.include_router(monitoring_router) | WIRED | Verified in previous verification; unchanged |
 
 ### Requirements Coverage
 
-All 6 must-haves checked. 5 satisfied, 1 blocked.
-
-| Requirement | Status | Blocking Issue |
-|-------------|--------|----------------|
-| Per-request inference row persistence | SATISFIED | — |
-| Sidebar model-performance route | SATISFIED | — |
-| Per-model batch reports | SATISFIED | — |
-| Unlabeled drift monitoring signals | SATISFIED | — |
-| Future labeled monitoring without schema changes | BLOCKED | target column absent from DDL |
-| Local runnable documentation | SATISFIED | — |
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| Per-request inference row persistence | SATISFIED | Unchanged from previous verification |
+| Top-nav Drift Monitoring routes to /model-performance | SATISFIED | NAV_ITEMS updated; sidebar duplicate removed |
+| Per-model Evidently batch reports | SATISFIED | Unchanged from previous verification |
+| Unlabeled drift monitoring signals | SATISFIED | Unchanged from previous verification |
+| Future labeled monitoring without schema changes | SATISFIED | target TEXT pre-declared in DDL; idempotent migration for existing DBs |
+| Thumbs feedback captures target labels | SATISFIED | POST /label route wired end-to-end |
+| Local runnable documentation | SATISFIED | Unchanged from previous verification |
 
 ### Anti-Patterns Found
 
-None. No TODO/FIXME blockers, no empty handlers, no placeholder implementations in any monitoring artifact.
+None. No TODO/FIXME blockers, no empty handlers, no placeholder returns, no console-only implementations in any modified file.
 
 ### Human Verification Required
 
-None needed for automated gap assessment. The single gap (missing target column in DDL) is structurally verifiable.
+The following items confirm behavioral correctness that structural analysis cannot fully cover:
+
+#### 1. Top-nav "Drift Monitoring" link is visually present and clickable
+
+**Test:** Start the app (`poetry run uvicorn app.src.main:app --port 8000`), open `http://localhost:8000/`, inspect the top navigation bar.
+**Expected:** "Drift Monitoring" label visible in top nav; clicking it navigates to /model-performance (redirect or fallback card).
+**Why human:** Template renders nav items dynamically; structural grep confirms the data but not the rendered visual.
+
+#### 2. Thumbs-up button swaps cell and writes target in live SQLite
+
+**Test:** Classify a sample document, click the thumbs-up icon in the top result row of the Model Predictions table.
+**Expected:** The Correct? cell immediately swaps to a green "Recorded" confirmation. Query `inference_events.sqlite3` — the row for that (request_id, model_id) shows `target = predicted_label`.
+**Why human:** HTMX swap behavior requires a live browser; DB query confirms persistence.
+
+#### 3. Thumbs-down leaves target NULL and shows "Noted"
+
+**Test:** Classify a second sample, click thumbs-down on any row.
+**Expected:** Cell swaps to slate "Noted" confirmation. The DB row for that (request_id, model_id) has `target IS NULL`.
+**Why human:** Same as above — requires live browser session.
 
 ### Gaps Summary
 
-One gap found. The `target` column is documented in `docs/monitoring.md` as a supported schema field for labeled backfill, and the batch job (`run_evidently.py`) correctly handles it when present via `"target" in model_df.columns`. However, the column is not pre-declared in `_CREATE_TABLE_SQL` in `store.py`. An operator following the documented backfill procedure (`UPDATE inference_events SET target = ...`) would receive a SQLite error: `no such column: target`.
-
-The fix is straightforward: add `target TEXT` to the DDL in `store.py`. Since `CREATE TABLE IF NOT EXISTS` is used, existing databases would still need an `ALTER TABLE` migration, but new deployments would get the column automatically. Alternatively, `init_db()` can be extended to check for and add the column via `ALTER TABLE IF NOT EXISTS` (SQLite does not support IF NOT EXISTS on ALTER TABLE, but a `PRAGMA table_info` check suffices).
+No gaps. All 7 must-haves from plans 01, 02, and 03 are structurally verified. The single gap from the initial verification (target column absent from DDL) was closed in commit a18de29 and regression-tested in TestTargetColumnDDL. The three additional must-haves from 06-03 (nav repoint, sidebar removal, thumbs feedback) are all present, substantive, and wired correctly.
 
 ---
 

@@ -29,12 +29,13 @@ dependencies = [
     "sentence-transformers (>=3.0.0,<4.0.0)",
     "plotly (>=5.0.0,<6.0.0)",
     "evidently (>=0.7.0,<1.0.0)",
-    "pandas (>=2.0.0,<4.0.0)",
+    "pandas (>=2.0.0,<3.0.0)",
     "python-docx (>=1.2.0,<2.0.0)",
     "scipy (>=1.13.0,<2.0.0)",
     "pytesseract (>=0.3.10,<0.4.0)",
     "structlog (>=25.5.0,<26.0.0)",
-    "seqlog (>=0.4.3,<0.5.0)"
+    "seqlog (>=0.4.3,<0.5.0)",
+    "mlflow (>=3.0.0,<4.0.0)"
 ]
 
 

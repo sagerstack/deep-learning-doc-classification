@@ -33,10 +33,53 @@
                     <td class="px-6 py-4">{{ r.predicted_class }}</td>
                     <td class="px-6 py-4 font-label {% if loop.first %}font-bold text-primary{% else %}font-bold{% endif %}">{{ "%.1f"|format(r.confidence * 100) }}%</td>
                     <td class="px-6 py-4">
+                        {% set fb = auto_feedback[r.model_name] if auto_feedback is defined and r.model_name in auto_feedback else none %}
+                        {% if fb is not none %}
+                        {# Auto-detected from filename — show badge + collapsed override #}
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex items-center gap-1.5">
+                                {% if fb %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-label font-bold uppercase bg-green-100 text-green-700">
+                                    <span class="material-symbols-outlined text-[12px]">check_circle</span> Auto: Correct
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-label font-bold uppercase bg-red-100 text-red-700">
+                                    <span class="material-symbols-outlined text-[12px]">cancel</span> Auto: Incorrect
+                                </span>
+                                {% endif %}
+                                <span class="text-[9px] text-slate-400 font-label">({{ true_label }})</span>
+                            </div>
+                            {# Override toggle — always available #}
+                            <div class="flex gap-1 items-center">
+                                <span class="text-[9px] text-slate-400 font-label mr-0.5">Override:</span>
+                                <button
+                                    hx-post="/label"
+                                    hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "true", "sample_set": "{{ sample_set }}", "true_label": "{{ true_label }}", "predicted_class": "{{ r.predicted_class }}"}'
+                                    hx-target="closest td"
+                                    hx-swap="innerHTML"
+                                    class="flex items-center justify-center w-6 h-6 rounded-full hover:bg-green-100 transition-colors group"
+                                    title="Override: mark as correct"
+                                >
+                                    <span class="material-symbols-outlined text-red-300 group-hover:text-green-600 text-base">thumb_up</span>
+                                </button>
+                                <button
+                                    hx-post="/label"
+                                    hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "false", "sample_set": "{{ sample_set }}", "true_label": "{{ true_label }}", "predicted_class": "{{ r.predicted_class }}"}'
+                                    hx-target="closest td"
+                                    hx-swap="innerHTML"
+                                    class="flex items-center justify-center w-6 h-6 rounded-full hover:bg-red-100 transition-colors group"
+                                    title="Override: mark as incorrect"
+                                >
+                                    <span class="material-symbols-outlined text-red-300 group-hover:text-red-500 text-base">thumb_down</span>
+                                </button>
+                            </div>
+                        </div>
+                        {% else %}
+                        {# No confident label from filename — manual only #}
                         <div class="flex gap-2">
                             <button
                                 hx-post="/label"
-                                hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "true"}'
+                                hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "true", "sample_set": "{{ sample_set }}", "true_label": "", "predicted_class": "{{ r.predicted_class }}"}'
                                 hx-target="closest td"
                                 hx-swap="innerHTML"
                                 class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-green-100 transition-colors group"
@@ -46,7 +89,7 @@
                             </button>
                             <button
                                 hx-post="/label"
-                                hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "false"}'
+                                hx-vals='{"request_id": "{{ request_id }}", "model_id": "{{ r.model_name }}", "correct": "false", "sample_set": "{{ sample_set }}", "true_label": "", "predicted_class": "{{ r.predicted_class }}"}'
                                 hx-target="closest td"
                                 hx-swap="innerHTML"
                                 class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-red-100 transition-colors group"
@@ -55,6 +98,7 @@
                                 <span class="material-symbols-outlined text-slate-300 group-hover:text-red-500 text-xl">thumb_down</span>
                             </button>
                         </div>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

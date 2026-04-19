@@ -13,7 +13,7 @@ from torchvision.models import ResNet50_Weights
 from torchvision import transforms as T
 
 from app.src.config import RVL_CDIP_LABELS
-from app.src.graph import add_positional_encoding_2d, build_grid_edge_index
+from app.src.graph import add_positional_encoding_2d, build_doc_knn_edges, build_grid_edge_index
 
 log = structlog.get_logger()
 
@@ -49,6 +49,13 @@ class PipelineResult:
     gat_ocr_texts: list = field(default_factory=list)      # OCR text per region node
     gat_img_w: int = 0
     gat_img_h: int = 0
+    # Inductive GCN neighborhood viz (query connected to 2000-doc bank via kNN)
+    gcn_neighbor_bank_ids: list = field(default_factory=list)   # [k] bank indices of query's neighbors
+    gcn_neighbor_labels: list = field(default_factory=list)     # [k] int class indices
+    gcn_neighbor_classes: list = field(default_factory=list)    # [k] human-readable class names
+    gcn_neighbor_similarities: list = field(default_factory=list)  # [k] cosine sims
+    gcn_neighbor_thumb_paths: list = field(default_factory=list)   # [k] thumbnail filenames
+    gcn_bank_size: int = 0
 
 
 def _emit_model_inference(r: "InferenceResult") -> None:
@@ -112,6 +119,68 @@ def _compute_text_density(image: Image.Image, detector, device: torch.device) ->
         return extract_text_density(image, detector, device)
     except Exception:
         return None
+
+
+def _run_inductive_gcn(
+    spec,
+    model: torch.nn.Module,
+    query_avgpool: torch.Tensor,
+    bank: dict,
+    device: torch.device,
+    k: int = 5,
+) -> tuple[InferenceResult, dict]:
+    """Run the Inductive GCN by connecting the query into the reference bank.
+
+    Matches training: L2-normalize, concat with bank [N+1, 2048], build cosine-kNN
+    (k=5, self-excluded), run the 3-layer GCN, and take the query node's logits.
+    """
+    t0 = time.perf_counter()
+
+    query = F.normalize(query_avgpool.unsqueeze(0), p=2, dim=1).to(device)  # [1, 2048]
+    bank_feats = bank["features"].to(device)                                # [N, 2048]
+    x = torch.cat([bank_feats, query], dim=0)                               # [N+1, 2048]
+
+    edge_index = build_doc_knn_edges(x, k=k, batch_size=2048)               # [2, (N+1)*k]
+
+    logits = model(x, edge_index)                                           # [N+1, 16]
+    query_logits = logits[-1]
+    probs = F.softmax(query_logits, dim=0)
+    confidence, pred_idx = probs.max(dim=0)
+
+    # Extract the query node's neighbors for visualization.
+    query_node = x.shape[0] - 1
+    query_src_mask = edge_index[0] == query_node
+    neighbor_bank_ids = edge_index[1][query_src_mask].cpu().tolist()
+
+    # Recompute the sims for UI display (we already have them via the kNN but it was internal)
+    sims_to_bank = (query @ bank_feats.T).squeeze(0)                        # [N]
+    neighbor_sims = sims_to_bank[neighbor_bank_ids].cpu().tolist()
+    neighbor_labels = bank["labels"][neighbor_bank_ids].cpu().tolist()
+    neighbor_classes = [RVL_CDIP_LABELS[c] for c in neighbor_labels]
+    neighbor_thumbs = [bank["thumb_paths"][i] for i in neighbor_bank_ids]
+
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+
+    inf_result = InferenceResult(
+        model_name=spec.name,
+        display_name=spec.display_name,
+        model_type=spec.model_type,
+        predicted_class=RVL_CDIP_LABELS[pred_idx.item()],
+        predicted_index=pred_idx.item(),
+        confidence=confidence.item(),
+        probabilities=probs.cpu().tolist(),
+        inference_time_ms=elapsed_ms,
+    )
+
+    viz_meta = {
+        "neighbor_bank_ids": neighbor_bank_ids,
+        "neighbor_labels": neighbor_labels,
+        "neighbor_classes": neighbor_classes,
+        "neighbor_similarities": neighbor_sims,
+        "neighbor_thumb_paths": neighbor_thumbs,
+        "bank_size": bank_feats.shape[0],
+    }
+    return inf_result, viz_meta
 
 
 def _run_single_model(
@@ -267,7 +336,39 @@ def run_inference_pipeline(
     _emit_model_inference(result.results[-1])
 
     # --- GNN Models ---
+    gcn_bank = registry.get("gcn_feature_bank")
     for spec_name, (spec, model) in registry["models"].items():
+        # Inductive GCN: query connects into the reference bank via kNN (doc-level graph).
+        # Dispatch early so the grid/feature_knn shared path below stays untouched.
+        if spec.graph_type == "doc_knn":
+            if gcn_bank is None:
+                log.error(
+                    "model.inference.failed",
+                    event_type="model.inference.failed",
+                    model_id=spec.name,
+                    error="GCN feature bank not loaded",
+                )
+                continue
+            try:
+                inf_result, viz = _run_inductive_gcn(spec, model, avgpool, gcn_bank, device)
+                result.results.append(inf_result)
+                _emit_model_inference(inf_result)
+                result.gcn_neighbor_bank_ids = viz["neighbor_bank_ids"]
+                result.gcn_neighbor_labels = viz["neighbor_labels"]
+                result.gcn_neighbor_classes = viz["neighbor_classes"]
+                result.gcn_neighbor_similarities = viz["neighbor_similarities"]
+                result.gcn_neighbor_thumb_paths = viz["neighbor_thumb_paths"]
+                result.gcn_bank_size = viz["bank_size"]
+            except Exception as exc:
+                log.error(
+                    "model.inference.failed",
+                    event_type="model.inference.failed",
+                    model_id=spec.name,
+                    error=str(exc),
+                    exc_info=True,
+                )
+            continue
+
         # Skip OCR-dependent models if BoC not available
         if spec.needs_boc and boc_features is None:
             result.results.append(

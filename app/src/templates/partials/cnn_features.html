@@ -6,23 +6,36 @@
         </div>
         <h2 class="font-headline font-extrabold text-2xl border-l-4 border-primary pl-4">CNN Feature Extraction <span class="text-sm font-label text-slate-400 font-normal ml-2">{{ "%.1f"|format(feature_time_ms / 1000) }}s</span></h2>
     </div>
-    <div class="grid grid-cols-2 gap-6">
+    <div class="grid grid-cols-[3fr_1fr] gap-6 items-stretch">
         <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm">
             <p class="font-label text-[10px] uppercase text-slate-500 font-bold mb-3 tracking-widest">Activation Heatmap</p>
-            <div class="relative h-48 rounded-lg overflow-hidden">
-                <img alt="Activation heatmap overlay" class="w-full h-full object-cover" src="data:image/png;base64,{{ heatmap_b64 }}"/>
-                <div class="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
+            <p class="font-body text-xs text-slate-400 mb-3">Highlights regions the CNN found most discriminative — warmer areas drove the prediction.</p>
+            <div class="relative rounded-lg overflow-hidden">
+                <img alt="Activation heatmap overlay" class="w-full max-h-[480px] object-contain" src="data:image/png;base64,{{ heatmap_b64 }}"/>
+                <div class="absolute inset-0 bg-primary/10 mix-blend-overlay pointer-events-none"></div>
             </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm">
-            <p class="font-label text-[10px] uppercase text-slate-500 font-bold mb-3 tracking-widest">Text Density Map</p>
-            <div class="h-48 rounded-lg bg-on-background/5 p-4 flex items-center justify-center">
-                {{ text_density_html | safe }}
+        <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-3 p-4 bg-on-background/5 rounded-lg border-l-2 border-primary/30">
+                <div class="flex flex-col">
+                    <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Backbone</span>
+                    <span class="font-label text-xl font-bold">ResNet-50</span>
+                </div>
+                <div class="h-px bg-outline-variant/30"></div>
+                <div class="flex flex-col">
+                    <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Feature Dim</span>
+                    <span class="font-label text-xl font-bold">2048</span>
+                </div>
+                <div class="h-px bg-outline-variant/30"></div>
+                <div class="flex flex-col">
+                    <span class="font-label text-[10px] uppercase text-slate-500 font-bold">Spatial Grid</span>
+                    <span class="font-label text-xl font-bold">7×7 <span class="text-sm text-slate-400 font-normal">(49)</span></span>
+                </div>
             </div>
+            <p class="font-body text-sm text-slate-600 bg-surface-container-low p-4 rounded-lg border-l-2 border-primary/30">
+                <span class="material-symbols-outlined text-primary align-middle mr-2">info</span>
+                ResNet-50 extracted <span class="font-label font-bold text-primary">2048-dimensional</span> features from <span class="font-label font-bold text-primary">49 spatial regions</span> (7×7 grid). Warm colors indicate high-activation regions used for classification.
+            </p>
         </div>
     </div>
-    <p class="font-body text-sm text-slate-600 bg-surface-container-low p-4 rounded-lg">
-        <span class="material-symbols-outlined text-primary align-middle mr-2">info</span>
-        ResNet-50 extracted <span class="font-label font-bold text-primary">2048-dimensional</span> features from <span class="font-label font-bold text-primary">49 spatial regions</span> (7x7 grid).
-    </p>
 </section>

@@ -50,10 +50,17 @@ def generate_text_density_html(
             "Text density not available</div>"
         )
 
-    values = text_density.detach().cpu().flatten().tolist()
+    density = text_density.detach().cpu().float()
+    vmin, vmax = density.min(), density.max()
+    if vmax - vmin > 0:
+        density = (density - vmin) / (vmax - vmin)
+    else:
+        density = density * 0.0
+
+    values = density.flatten().tolist()
     cells = []
     for v in values:
-        opacity = max(0.0, min(1.0, v))
+        opacity = max(0.05, min(1.0, v))
         cells.append(
             f'<div class="aspect-square rounded-sm" '
             f'style="background:{primary_color};opacity:{opacity:.2f}"></div>'
@@ -240,6 +247,238 @@ def generate_node_importance_html(
         + "".join(cells)
         + "</div>"
     )
+
+
+def generate_boc_density_html(
+    boc_features: torch.Tensor | None,
+    primary_color: str = "#795300",
+) -> str:
+    """Render BoC character density as a 7x7 heatmap grid.
+
+    Args:
+        boc_features: [49, 70] BoC tensor or None if OCR unavailable.
+        primary_color: CSS color for the cells.
+    """
+    if boc_features is None:
+        return (
+            '<div class="flex items-center justify-center h-full text-slate-400 font-label text-xs">'
+            "OCR not available — install Tesseract</div>"
+        )
+
+    density = boc_features.detach().cpu().float().sum(dim=1)  # [49]
+    vmin, vmax = density.min(), density.max()
+    if vmax - vmin > 0:
+        density = (density - vmin) / (vmax - vmin)
+    else:
+        density = density * 0.0
+
+    cells = []
+    for v in density.tolist():
+        opacity = max(0.05, min(1.0, v))
+        cells.append(
+            f'<div class="aspect-square rounded-sm" '
+            f'style="background:{primary_color};opacity:{opacity:.2f}"></div>'
+        )
+    return (
+        '<div class="grid grid-cols-7 grid-rows-7 gap-1 w-full h-full">'
+        + "".join(cells)
+        + "</div>"
+    )
+
+
+def generate_document_graph_plotly(
+    original_image: Image.Image,
+    boxes: list,
+    edge_index: torch.Tensor,
+    ocr_texts: list,
+    layout_class_colors: dict,
+    layout_class_names: dict,
+) -> str:
+    """Interactive Plotly document graph — matches the notebook Viz 3 exactly.
+
+    Args:
+        boxes: [(x, y, w, h, class_id), ...] region nodes (no global node)
+        edge_index: [2, E] undirected edges (includes global node at index len(boxes))
+        ocr_texts: [str, ...] OCR text per region node (global text is last)
+        layout_class_colors: {class_id: hex_color}
+        layout_class_names: {class_id: str}
+
+    Returns:
+        HTML string (Plotly div, CDN-linked) for embedding in a template.
+    """
+    import plotly.graph_objects as go
+
+    imgRgb = original_image.convert("RGB")
+    imgW, imgH = imgRgb.size
+
+    # Encode image as base64 for Plotly background
+    buf = io.BytesIO()
+    imgRgb.save(buf, format="PNG")
+    imgB64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    nRegions = len(boxes)
+    nNodes = nRegions + 1  # +1 for global node
+    globalIdx = nRegions
+    boxesWithGlobal = list(boxes) + [(0, 0, imgW, imgH, -1)]
+
+    # Node positions and areas
+    cxPx, cyPx, areas = [], [], []
+    for x, y, w, h, _ in boxesWithGlobal:
+        cxPx.append(x + w / 2)
+        cyPx.append(y + h / 2)
+        areas.append((w * h) / (imgW * imgH))
+
+    # Node sizes scaled by area
+    areaArr = np.array(areas[:nRegions]) if nRegions > 0 else np.array([1.0])
+    if areaArr.max() > areaArr.min():
+        scaled = 10 + 25 * (areaArr - areaArr.min()) / (areaArr.max() - areaArr.min())
+    else:
+        scaled = np.full(len(areaArr), 16.0)
+    nodeSizes = list(scaled) + [30]
+
+    # Hover cards
+    allOcrTexts = list(ocr_texts) + [ocr_texts[-1] if ocr_texts else ""]
+    hoverTexts = []
+    for i, (x, y, w, h, clsId) in enumerate(boxesWithGlobal):
+        isGlobal = i >= nRegions
+        clsName = "GLOBAL (full image)" if isGlobal else layout_class_names.get(clsId, "?")
+        rawText = allOcrTexts[i] if i < len(allOcrTexts) else ""
+        textSnip = rawText[:150].replace("\n", "<br>").strip() or "<i>(no text)</i>"
+        hoverTexts.append(
+            f"<b>Node {i}</b>"
+            f"<br><b>Class:</b> {clsName}"
+            f"<br><b>Position:</b> ({x:.0f}, {y:.0f}) — {w:.0f}×{h:.0f}px"
+            f"<br><b>Area:</b> {areas[i]:.1%} of page"
+            f"<br><br><b>OCR:</b><br>{textSnip}"
+        )
+
+    # Figure sizing — preserve document aspect ratio
+    PLOT_HEIGHT = 650
+    MARGIN_T, MARGIN_B, MARGIN_L, MARGIN_R = 40, 60, 20, 20
+    plotAreaH = PLOT_HEIGHT - MARGIN_T - MARGIN_B
+    plotAreaW = int(plotAreaH * (imgW / imgH))
+    PLOT_WIDTH = plotAreaW + MARGIN_L + MARGIN_R
+
+    fig = go.Figure()
+
+    # 1) Document image as background
+    fig.add_layout_image(
+        source=f"data:image/png;base64,{imgB64}",
+        xref="x", yref="y",
+        x=0, y=0,
+        sizex=imgW, sizey=imgH,
+        sizing="stretch", layer="below", opacity=0.4,
+    )
+
+    # 2) Bounding box overlays
+    for x, y, w, h, clsId in boxes:
+        color = layout_class_colors.get(clsId, "#888")
+        fig.add_shape(
+            type="rect", x0=x, y0=y, x1=x + w, y1=y + h,
+            line=dict(color=color, width=2, dash="dot"),
+            fillcolor=color, opacity=0.12, layer="below",
+        )
+
+    # 3) Edges — region-region vs global-region
+    edgesCpu = edge_index.detach().cpu()
+    edgePairs = list(zip(edgesCpu[0].tolist(), edgesCpu[1].tolist()))
+    seenEdges: set[tuple] = set()
+    regionEdgeX, regionEdgeY = [], []
+    globalEdgeX, globalEdgeY = [], []
+    for s, d in edgePairs:
+        key = (min(s, d), max(s, d))
+        if key in seenEdges:
+            continue
+        seenEdges.add(key)
+        ex = [cxPx[s], cxPx[d], None]
+        ey = [cyPx[s], cyPx[d], None]
+        if s >= nRegions or d >= nRegions:
+            globalEdgeX += ex
+            globalEdgeY += ey
+        else:
+            regionEdgeX += ex
+            regionEdgeY += ey
+
+    fig.add_trace(go.Scatter(
+        x=regionEdgeX, y=regionEdgeY, mode="lines",
+        line=dict(width=2.0, color="rgba(60,60,60,0.65)"),
+        hoverinfo="skip", showlegend=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=globalEdgeX, y=globalEdgeY, mode="lines",
+        line=dict(width=1.8, color="rgba(218,165,32,0.75)", dash="dot"),
+        hoverinfo="skip", showlegend=False,
+    ))
+
+    # 4) Region nodes — one trace per layout class
+    classesPresentSorted = sorted(set(b[4] for b in boxes))
+    for clsId in classesPresentSorted:
+        clsName = layout_class_names.get(clsId, f"cls_{clsId}")
+        idxs = [i for i in range(nRegions) if boxesWithGlobal[i][4] == clsId]
+        fig.add_trace(go.Scatter(
+            x=[cxPx[i] for i in idxs],
+            y=[cyPx[i] for i in idxs],
+            mode="markers+text",
+            marker=dict(
+                size=[nodeSizes[i] for i in idxs],
+                color=layout_class_colors.get(clsId, "#888"),
+                opacity=0.9,
+                line=dict(width=1.5, color="white"),
+            ),
+            text=[str(i) for i in idxs],
+            textfont=dict(size=8, color="white", family="Arial Black"),
+            textposition="middle center",
+            hovertext=[hoverTexts[i] for i in idxs],
+            hoverinfo="text",
+            name=clsName,
+        ))
+
+    # 5) Global node
+    fig.add_trace(go.Scatter(
+        x=[cxPx[globalIdx]], y=[cyPx[globalIdx]],
+        mode="markers+text",
+        marker=dict(size=28, color="#FFD700", symbol="star",
+                    opacity=0.95, line=dict(width=2, color="#333")),
+        text=["G"],
+        textfont=dict(size=10, color="#333", family="Arial Black"),
+        textposition="top center",
+        hovertext=[hoverTexts[globalIdx]],
+        hoverinfo="text",
+        name="Global node",
+    ))
+
+    fig.update_layout(
+        xaxis=dict(
+            range=[-imgW * 0.02, imgW * 1.02],
+            showgrid=False, zeroline=False, showticklabels=False,
+            constrain="domain",
+        ),
+        yaxis=dict(
+            range=[imgH * 1.02, -imgH * 0.02],  # reversed: y=0 at top
+            showgrid=False, zeroline=False, showticklabels=False,
+            scaleanchor="x", scaleratio=1,
+            constrain="domain",
+        ),
+        width=PLOT_WIDTH,
+        height=PLOT_HEIGHT,
+        plot_bgcolor="#fafafa",
+        paper_bgcolor="white",
+        legend=dict(
+            title=dict(text="Layout Classes", font=dict(size=10), side="left"),
+            font=dict(size=10),
+            bgcolor="rgba(255,255,255,0.85)",
+            bordercolor="#ddd", borderwidth=1,
+            orientation="h",
+            x=0, y=-0.06, xanchor="left", yanchor="top",
+        ),
+        hoverlabel=dict(
+            bgcolor="white", bordercolor="#ccc",
+            font=dict(size=12, family="Arial"),
+        ),
+        margin=dict(l=MARGIN_L, r=MARGIN_R, t=MARGIN_T, b=MARGIN_B),
+    )
+
+    return fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
 
 
 def generate_original_image_base64(

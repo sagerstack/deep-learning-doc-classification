@@ -93,7 +93,7 @@
 <header class="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
     <div class="flex items-center gap-6 px-6 py-4">
         <div class="flex min-w-0 flex-col border-l-4 border-primary pl-4">
-            <h1 class="text-lg font-bold tracking-tight text-indigo-900 font-headline">Deep Learning Classification Demo</h1>
+            <h1 class="text-lg font-bold tracking-tight text-indigo-900 font-headline">Document Classification Research</h1>
             <p class="text-xs font-body text-slate-500">61.502 Deep Learning for Enterprise — <span class="font-bold text-primary">Group 1</span></p>
         </div>
         <nav aria-label="Primary" class="hidden flex-1 items-center justify-center lg:flex">
@@ -135,13 +135,17 @@
 
     <!-- Left Panel: Sidebar -->
     <aside class="h-screen w-[35%] sticky left-0 top-16 bg-slate-50 flex flex-col p-8 space-y-8 border-r border-slate-200/10 overflow-y-auto"
-           x-data="{ selectedSrc: null, tab: 'in-dist' }">
+           x-data="{ selectedSrc: null, selectedLabel: null, tab: 'in-dist' }">
         {% block upload_zone %}
         <!-- Selected Image -->
         <div class="space-y-3">
             <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Selected Image</h3>
-            <div x-show="selectedSrc" class="bg-surface-container-lowest rounded-xl p-1.5 h-[30rem] overflow-hidden border border-primary/20">
+            <div x-show="selectedSrc" class="relative bg-surface-container-lowest rounded-xl p-1.5 h-[30rem] overflow-hidden border border-primary/20">
                 <img :src="selectedSrc" alt="Selected document" class="w-full h-full object-cover rounded-lg"/>
+                <div x-show="selectedLabel" class="absolute bottom-3 left-3 right-3 flex items-center gap-1.5">
+                    <span class="font-label text-[9px] uppercase tracking-widest text-slate-400">True class</span>
+                    <span class="bg-primary/90 text-white font-label font-bold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full" x-text="selectedLabel"></span>
+                </div>
             </div>
             <div x-show="!selectedSrc" class="border-2 border-dashed border-outline-variant/30 bg-surface-container-lowest rounded-xl h-[30rem] flex flex-col items-center justify-center">
                 <span class="material-symbols-outlined text-5xl text-outline/30">image</span>
@@ -157,7 +161,7 @@
                     <input type="file" name="file" accept="image/png,image/jpeg,image/tiff" class="hidden"
                            @change="
                                const f = $event.target.files[0];
-                               if (f) { const r = new FileReader(); r.onload = e => selectedSrc = e.target.result; r.readAsDataURL(f); }
+                               if (f) { const r = new FileReader(); r.onload = e => selectedSrc = e.target.result; r.readAsDataURL(f); selectedLabel = null; }
                                $event.target.closest('form').requestSubmit();
                            "/>
                     <div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center mb-2 group-hover:scale-110 transition-transform hide-on-request">
@@ -189,7 +193,7 @@
             <div x-show="tab === '{{ cat.key }}'" x-cloak class="grid grid-cols-2 gap-3">
                 {% for sample in cat.samples %}
                 <div class="bg-surface-container-lowest p-2 rounded-xl border border-transparent hover:border-primary cursor-pointer transition-all flex flex-col gap-2 group sample-card {% if cat.key == 'oo-dom' %}sample-card-oodom{% endif %}"
-                     @click="selectedSrc = '/static/samples/{{ sample.filename }}'"
+                     @click="selectedSrc = '/static/samples/{{ sample.filename }}'; selectedLabel = '{{ sample.label }}'"
                      hx-post="/classify" hx-target="#results" hx-swap="innerHTML"
                      hx-vals='{"sample": "{{ sample.filename }}"}'
                      hx-indicator="#upload-form">
@@ -227,13 +231,14 @@
 
             {% if has_results %}
 
-            <div class="grid grid-cols-2 gap-8 items-start">
+            <div class="space-y-16">
                 {% include "partials/cnn_features.html" %}
                 {% include "partials/graph_construction.html" %}
+                {% include "partials/gcn_features.html" %}
+                {% include "partials/gat_features.html" %}
+                {% include "partials/model_predictions.html" %}
+                {% include "partials/detailed_analysis.html" %}
             </div>
-            {% include "partials/gat_features.html" %}
-            {% include "partials/model_predictions.html" %}
-            {% include "partials/detailed_analysis.html" %}
 
             {% else %}
 

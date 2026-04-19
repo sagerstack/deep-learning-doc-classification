@@ -1,4 +1,4 @@
-"""Model registry: ModelSpec definitions and checkpoint loading for all 6 models."""
+"""Model registry: ModelSpec definitions and checkpoint loading for all 4 final models."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -11,12 +11,9 @@ from torchvision.models.feature_extraction import create_feature_extractor
 
 from app.src.config import MODEL_DIR
 from app.src.model import (
-    AttentionPoolFusionSAGE,
     DocumentGAT,
-    FusionGAT,
     FusionGraphSAGE,
-    GatedBoCGraphSAGE,
-    HybridGraphSAGE,
+    InductiveGCN,
 )
 
 
@@ -28,7 +25,7 @@ class ModelSpec:
     model_class: Optional[Type[nn.Module]]
     constructor_kwargs: dict = field(default_factory=dict)
     checkpoint_path: str = ""
-    graph_type: str = "none"  # "none" | "feature_knn" | "gated_boc"
+    graph_type: str = "none"  # "none" | "feature_knn" | "doc_knn" | "gated_boc"
     needs_global_feat: bool = False
     needs_pe: bool = False
     needs_boc: bool = False
@@ -41,7 +38,7 @@ MODEL_SPECS = [
         display_name="CNN Baseline (ResNet-50)",
         model_type="CNN",
         model_class=None,
-        checkpoint_path="exp14b_finetuned_resnet50_cnn.pt",
+        checkpoint_path="best_model_resnet50_03.pt",
         graph_type="none",
     ),
     ModelSpec(
@@ -50,56 +47,45 @@ MODEL_SPECS = [
         model_type="GNN",
         model_class=FusionGraphSAGE,
         constructor_kwargs={"in_channels": 2048},
-        checkpoint_path="exp16_fusion_featknn_graphsage.pt",
+        checkpoint_path="fusion_gnn_feat_knn_best.pt",
         graph_type="feature_knn",
         needs_global_feat=True,
     ),
     ModelSpec(
-        name="fusion_gat",
-        display_name="Fusion GAT",
+        name="inductive_gcn",
+        display_name="Inductive GCN",
         model_type="GNN",
-        model_class=FusionGAT,
-        constructor_kwargs={"in_channels": 2048},
-        checkpoint_path="exp23_gat_fusion.pt",
-        graph_type="feature_knn",
-        needs_global_feat=True,
-    ),
-    ModelSpec(
-        name="boc_graphsage",
-        display_name="BoC GraphSAGE",
-        model_type="GNN+OCR",
-        model_class=HybridGraphSAGE,
-        constructor_kwargs={"node_dim": 2120},
-        checkpoint_path="exp25_boc_sage.pt",
-        graph_type="feature_knn",
-        needs_global_feat=True,
-        needs_pe=True,
-        needs_boc=True,
-    ),
-    ModelSpec(
-        name="gated_boc_graphsage",
-        display_name="Gated BoC GraphSAGE",
-        model_type="GNN+OCR",
-        model_class=GatedBoCGraphSAGE,
-        constructor_kwargs={"cnn_dim": 2050, "boc_dim": 70, "proj_dim": 16},
-        checkpoint_path="exp26_gated_boc.pt",
-        graph_type="gated_boc",
-        needs_global_feat=True,
-        needs_pe=True,
-        needs_boc=True,
-    ),
-    ModelSpec(
-        name="attn_pool_graphsage",
-        display_name="Attention Pool GraphSAGE",
-        model_type="GNN",
-        model_class=AttentionPoolFusionSAGE,
+        model_class=InductiveGCN,
         constructor_kwargs={},
-        checkpoint_path="exp27_attn_pool.pt",
-        graph_type="feature_knn",
-        needs_global_feat=True,
-        needs_pe=True,
+        checkpoint_path="inductive_gcn_320k.pt",
+        graph_type="doc_knn",
+        needs_global_feat=False,
     ),
 ]
+
+
+GCN_FEATURE_BANK_PATH = Path(__file__).resolve().parent.parent / "data" / "gcn_feature_bank.pt"
+
+
+def _load_gcn_feature_bank(device: torch.device) -> Optional[dict]:
+    """Load the document feature bank used by the Inductive GCN for single-doc inference."""
+    if not GCN_FEATURE_BANK_PATH.exists():
+        print(f"Warning: GCN feature bank not found at {GCN_FEATURE_BANK_PATH}")
+        print("         Build it with: poetry run python scripts/build_gcn_feature_bank.py")
+        return None
+
+    bundle = torch.load(GCN_FEATURE_BANK_PATH, map_location="cpu", weights_only=False)
+    bank = {
+        "features": bundle["features"].to(device),         # [N, 2048] L2-normalized
+        "labels": bundle["labels"].to(device),             # [N] int64
+        "doc_ids": bundle["doc_ids"],                      # [N] int64 (HF dataset indices)
+        "thumb_dir": bundle["thumb_dir"],
+        "thumb_paths": bundle["thumb_paths"],
+        "num_classes": bundle["num_classes"],
+        "per_class": bundle["per_class"],
+    }
+    print(f"Loaded GCN feature bank: {tuple(bank['features'].shape)} on {device}")
+    return bank
 
 
 def _unwrap_resnet_checkpoint(checkpoint) -> dict:
@@ -123,7 +109,7 @@ def load_all_models(device: torch.device) -> dict:
         }
     """
     # Load CNN baseline checkpoint (ResNet-50 with fc head)
-    cnn_checkpoint_path = MODEL_DIR / "exp14b_finetuned_resnet50_cnn.pt"
+    cnn_checkpoint_path = MODEL_DIR / "best_model_resnet50_03.pt"
     checkpoint = torch.load(cnn_checkpoint_path, map_location="cpu", weights_only=False)
     state_dict = _unwrap_resnet_checkpoint(checkpoint)
 
@@ -189,6 +175,9 @@ def load_all_models(device: torch.device) -> dict:
 
     print(f"Loaded CNN baseline + {len(gnn_models)} GNN models on {device}")
 
+    # Feature bank for Inductive GCN single-doc inference (query connects into bank via kNN).
+    gcn_feature_bank = _load_gcn_feature_bank(device)
+
     # Pre-load doctr text density detector once at startup.
     # Loading it per-request causes a hang (model weights fetched/loaded on every call).
     text_detector = None
@@ -205,4 +194,5 @@ def load_all_models(device: torch.device) -> dict:
         "models": gnn_models,
         "multimodal_gat_model": multimodal_gat_model,
         "text_detector": text_detector,
+        "gcn_feature_bank": gcn_feature_bank,
     }

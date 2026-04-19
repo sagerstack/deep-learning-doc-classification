@@ -1,0 +1,1029 @@
+{
+    "OwnerId": null,
+    "Title": "Document Classification \u2014 Observability",
+    "IsProtected": false,
+    "SignalExpression": null,
+    "Charts": [
+        {
+            "Id": "chart-40",
+            "Title": "All Events",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-41",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "count"
+                        }
+                    ],
+                    "Where": null,
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Line",
+                        "LineFillToZeroY": true,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 8,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-42",
+            "Title": "Errors and Exceptions",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-43",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "count"
+                        }
+                    ],
+                    "Where": "@Exception is not null or @Level in ['f', 'fa', 'fat', 'ftl', 'fata', 'fatl', 'fatal', 'c', 'cr', 'cri', 'crt', 'crit', 'critical', 'alert', 'emerg', 'panic', 'e', 'er', 'err', 'eror', 'erro', 'error'] ci",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Bar",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": true,
+                        "BarOverlaySum": true,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Reds"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 4,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-44",
+            "Title": "Total Requests",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-45",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "requests"
+                        }
+                    ],
+                    "Where": "event_type = 'request.received'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-46",
+            "Title": "Completed",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-47",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "completed"
+                        }
+                    ],
+                    "Where": "event_type = 'request.completed'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-48",
+            "Title": "Failed",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-49",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "failed"
+                        }
+                    ],
+                    "Where": "event_type = 'request.failed'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-50",
+            "Title": "Avg Model Inference Latency (ms)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-51",
+                    "Measurements": [
+                        {
+                            "Value": "mean(model_latency_ms)",
+                            "Label": "avg_ms"
+                        }
+                    ],
+                    "Where": "event_type = 'model.inference'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-52",
+            "Title": "Requests Over Time",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-53",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "requests"
+                        }
+                    ],
+                    "Where": "event_type = 'request.received'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Line",
+                        "LineFillToZeroY": true,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 6,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-54",
+            "Title": "Failures Over Time",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-55",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "failures"
+                        }
+                    ],
+                    "Where": "event_type = 'request.failed'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Line",
+                        "LineFillToZeroY": true,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Reds"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 6,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-56",
+            "Title": "CNN Baseline \u2014 Avg Latency (ms)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-57",
+                    "Measurements": [
+                        {
+                            "Value": "mean(model_latency_ms)",
+                            "Label": "avg_ms"
+                        }
+                    ],
+                    "Where": "event_type = 'model.inference' and model_id = 'cnn_baseline'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-58",
+            "Title": "Fusion GraphSAGE \u2014 Avg Latency (ms)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-59",
+                    "Measurements": [
+                        {
+                            "Value": "mean(model_latency_ms)",
+                            "Label": "avg_ms"
+                        }
+                    ],
+                    "Where": "event_type = 'model.inference' and model_id = 'fusion_graphsage'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-60",
+            "Title": "Inductive GCN \u2014 Avg Latency (ms)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-61",
+                    "Measurements": [
+                        {
+                            "Value": "mean(model_latency_ms)",
+                            "Label": "avg_ms"
+                        }
+                    ],
+                    "Where": "event_type = 'model.inference' and model_id = 'inductive_gcn'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-62",
+            "Title": "Multimodal GAT \u2014 Avg Latency (ms)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-63",
+                    "Measurements": [
+                        {
+                            "Value": "mean(model_latency_ms)",
+                            "Label": "avg_ms"
+                        }
+                    ],
+                    "Where": "event_type = 'model.inference' and model_id = 'multimodal_gat'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-68",
+            "Title": "Prediction Distribution \u2014 CNN Baseline",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-69",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "predictions"
+                        }
+                    ],
+                    "Where": "event_type = 'model.inference' and model_id = 'cnn_baseline'",
+                    "SignalExpression": null,
+                    "GroupBy": [
+                        "predicted_class"
+                    ],
+                    "DisplayStyle": {
+                        "Type": "Pie",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 2
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-70",
+            "Title": "Prediction Distribution \u2014 Fusion GraphSAGE",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-71",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "predictions"
+                        }
+                    ],
+                    "Where": "event_type = 'model.inference' and model_id = 'fusion_graphsage'",
+                    "SignalExpression": null,
+                    "GroupBy": [
+                        "predicted_class"
+                    ],
+                    "DisplayStyle": {
+                        "Type": "Pie",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 2
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-72",
+            "Title": "Prediction Distribution \u2014 Inductive GCN",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-73",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "predictions"
+                        }
+                    ],
+                    "Where": "event_type = 'model.inference' and model_id = 'inductive_gcn'",
+                    "SignalExpression": null,
+                    "GroupBy": [
+                        "predicted_class"
+                    ],
+                    "DisplayStyle": {
+                        "Type": "Pie",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 2
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-74",
+            "Title": "Prediction Distribution \u2014 Multimodal GAT",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-75",
+                    "Measurements": [
+                        {
+                            "Value": "count(*)",
+                            "Label": "predictions"
+                        }
+                    ],
+                    "Where": "event_type = 'model.inference' and model_id = 'multimodal_gat'",
+                    "SignalExpression": null,
+                    "GroupBy": [
+                        "predicted_class"
+                    ],
+                    "DisplayStyle": {
+                        "Type": "Pie",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 2
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-81",
+            "Title": "CNN Baseline \u2014 Accuracy (In-Dist)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-82",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'cnn_baseline' and sample_set = 'in_dist'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-83",
+            "Title": "Fusion GraphSAGE \u2014 Accuracy (In-Dist)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-84",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'fusion_graphsage' and sample_set = 'in_dist'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-85",
+            "Title": "Inductive GCN \u2014 Accuracy (In-Dist)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-86",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'inductive_gcn' and sample_set = 'in_dist'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-87",
+            "Title": "Multimodal GAT \u2014 Accuracy (In-Dist)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-88",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'multimodal_gat' and sample_set = 'in_dist'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-97",
+            "Title": "CNN Baseline \u2014 Accuracy (OO-Dist)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-98",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'cnn_baseline' and sample_set = 'oo_dist'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-99",
+            "Title": "Fusion GraphSAGE \u2014 Accuracy (OO-Dist)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-100",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'fusion_graphsage' and sample_set = 'oo_dist'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-101",
+            "Title": "Inductive GCN \u2014 Accuracy (OO-Dist)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-102",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'inductive_gcn' and sample_set = 'oo_dist'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-103",
+            "Title": "Multimodal GAT \u2014 Accuracy (OO-Dist)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-104",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'multimodal_gat' and sample_set = 'oo_dist'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-105",
+            "Title": "CNN Baseline \u2014 Accuracy (OO-Dom)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-106",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'cnn_baseline' and sample_set = 'oo_dom'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-107",
+            "Title": "Fusion GraphSAGE \u2014 Accuracy (OO-Dom)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-108",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'fusion_graphsage' and sample_set = 'oo_dom'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-109",
+            "Title": "Inductive GCN \u2014 Accuracy (OO-Dom)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-110",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'inductive_gcn' and sample_set = 'oo_dom'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        },
+        {
+            "Id": "chart-111",
+            "Title": "Multimodal GAT \u2014 Accuracy (OO-Dom)",
+            "SignalExpression": null,
+            "Queries": [
+                {
+                    "Id": "chartquery-112",
+                    "Measurements": [
+                        {
+                            "Value": "mean(auto_correct_int)",
+                            "Label": "accuracy"
+                        }
+                    ],
+                    "Where": "event_type = 'label.feedback' and model_id = 'multimodal_gat' and sample_set = 'oo_dom'",
+                    "SignalExpression": null,
+                    "GroupBy": [],
+                    "DisplayStyle": {
+                        "Type": "Value",
+                        "LineFillToZeroY": false,
+                        "LineShowMarkers": false,
+                        "BarOverlaySum": false,
+                        "UseLogarithmicScale": false,
+                        "SuppressLegend": false,
+                        "Palette": "Default"
+                    },
+                    "Having": null,
+                    "OrderBy": [],
+                    "Limit": null
+                }
+            ],
+            "DisplayStyle": {
+                "WidthColumns": 3,
+                "HeightRows": 1
+            },
+            "Description": null
+        }
+    ],
+    "Id": "dashboard-33",
+    "Links": {
+        "Self": "api/dashboards/dashboard-33?version=1",
+        "Group": "api/dashboards/resources"
+    }
+}

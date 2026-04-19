@@ -1,5 +1,7 @@
 import io
 import logging
+import math
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -10,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from jinja2_fragments.fastapi import Jinja2Blocks
 from PIL import Image
 
-from app.src.config import MONITORING_DB_PATH, RVL_CDIP_LABELS, SAMPLES_DIR, SEQ_UI_URL, TEMPLATES_DIR
+from app.src.config import MLFLOW_DB_PATH, MLFLOW_EXPERIMENT_NAME, MLFLOW_UI_URL, MONITORING_DB_PATH, RVL_CDIP_LABELS, SAMPLES_DIR, SEQ_UI_URL, TEMPLATES_DIR
 from app.src.monitoring.schema import build_inference_events
 from app.src.monitoring.store import log_inference_events
 from app.src.services.inference import run_inference_pipeline
@@ -36,10 +38,9 @@ templates = Jinja2Blocks(directory=str(TEMPLATES_DIR))
 
 NAV_ITEMS = (
     {"key": "demo", "label": "Demo", "href": "/"},
-    {"key": "models", "label": "Models", "href": "/models"},
-    {"key": "experiments", "label": "Experiments", "href": "/experiments"},
+    {"key": "experiments", "label": "Experiments", "href": "/experiments", "target": "_blank"},
     {"key": "drift-monitoring", "label": "Drift Monitoring", "href": "/model-performance", "target": "_blank"},
-    {"key": "observability", "label": "Observability", "href": SEQ_UI_URL, "target": "_blank"},
+    {"key": "observability", "label": "Observability", "href": SEQ_UI_URL + "/#/dashboards", "target": "_blank"},
 )
 
 SAMPLE_CATEGORIES = (
@@ -115,12 +116,88 @@ def _infer_sample_set(sample_name: str | None) -> str:
     return "upload"
 
 
+_CATEGORY_TO_SAMPLE_SET = {
+    "in-dist": "in_dist",
+    "oo-dist": "oo_dist",
+    "oo-dom": "oo_dom",
+}
+
+
+def _infer_upload_sample_set(filename: str) -> str:
+    """Match uploaded filename against sample folders to inherit its category.
+
+    If the filename matches exactly one category folder, return that sample_set.
+    If ambiguous (found in multiple) or not found, return 'oo_dom'.
+    """
+    stem = Path(filename).name  # strip any path prefix, keep name + ext
+    matches = []
+    for category in _CATEGORY_TO_SAMPLE_SET:
+        if (SAMPLES_DIR / category / stem).exists():
+            matches.append(category)
+    if len(matches) == 1:
+        return _CATEGORY_TO_SAMPLE_SET[matches[0]]
+    return "oo_dom"
+
+
+# Slugs that need a space when matching against model output labels
+_SLUG_TO_LABEL: dict[str, str] = {
+    "scientific_publication": "scientific publication",
+    "scientific_report": "scientific report",
+    "file_folder": "file folder",
+    "news_article": "news article",
+}
+
+# All valid RVL-CDIP slugs (underscored)
+_RVLCDIP_SLUGS: tuple[str, ...] = (
+    "letter", "form", "email", "handwritten", "advertisement",
+    "scientific_report", "scientific_publication", "specification",
+    "file_folder", "news_article", "budget", "invoice",
+    "presentation", "questionnaire", "resume", "memo",
+)
+
+
+def _extract_true_label(filename: str) -> str | None:
+    """Return a confident true label from filename slug, or None if ambiguous.
+
+    Only fires when the stem starts with a known RVL-CDIP class slug so that
+    generic names like 'scan_001.jpg' or 'document.jpg' are left as None.
+    """
+    stem = Path(filename).stem.lower()
+    for slug in _RVLCDIP_SLUGS:
+        if stem == slug or stem.startswith(slug + "_") or stem.startswith(slug + "-"):
+            return _SLUG_TO_LABEL.get(slug, slug.replace("_", " "))
+    return None
+
+
+def _apply_auto_feedback(
+    request_id: str,
+    model_id: str,
+    predicted_class: str,
+    true_label: str,
+) -> bool:
+    """Write auto-feedback to monitoring DB. Returns True if correct, False if not."""
+    is_correct = predicted_class == true_label
+    if is_correct:
+        try:
+            with sqlite3.connect(str(MONITORING_DB_PATH)) as conn:
+                conn.execute(
+                    "UPDATE inference_events SET target = predicted_label "
+                    "WHERE request_id = ? AND model_id = ?",
+                    (request_id, model_id),
+                )
+                conn.commit()
+        except sqlite3.Error as exc:
+            logger.warning("Auto-feedback DB write failed (non-fatal): %s", exc)
+    return is_correct
+
+
 def _build_result_context(
     request: Request,
     image: Image.Image,
     *,
     sample_type: str = "upload",
     sample_name: str = "upload",
+    sample_set: str = "upload",
     request_id: str,
 ) -> dict:
     registry = request.app.state.registry
@@ -190,6 +267,36 @@ def _build_result_context(
          if cls_id in LAYOUT_CLASS_NAMES}.values()
     )
 
+    # Inductive GCN neighborhood viz — radial SVG layout precomputed here
+    gcn_result = next((r for r in pipeline.results if r.model_name == "inductive_gcn"), None)
+    gcn_neighbors = []
+    if pipeline.gcn_neighbor_bank_ids:
+        predicted_cls = gcn_result.predicted_class if gcn_result else None
+        cx, cy, radius = 400, 300, 220           # SVG canvas center + radial distance
+        thumb_size = 96                          # neighbor thumbnail size
+        n = len(pipeline.gcn_neighbor_bank_ids)
+        for idx in range(n):
+            # Start at top (-pi/2), go clockwise; best neighbor at top.
+            angle = -math.pi / 2 + idx * (2 * math.pi / n)
+            nx = cx + radius * math.cos(angle)
+            ny = cy + radius * math.sin(angle)
+            cls_name = pipeline.gcn_neighbor_classes[idx]
+            gcn_neighbors.append({
+                "bank_id": pipeline.gcn_neighbor_bank_ids[idx],
+                "class_name": cls_name,
+                "similarity": pipeline.gcn_neighbor_similarities[idx],
+                "thumb_url": f"/gcn-thumbs/{pipeline.gcn_neighbor_thumb_paths[idx]}",
+                "agrees": cls_name == predicted_cls,
+                "cx": nx,
+                "cy": ny,
+                "thumb_x": nx - thumb_size / 2,
+                "thumb_y": ny - thumb_size / 2,
+                "label_y": ny + thumb_size / 2 + 18,   # below the thumbnail
+                "sim_label_x": (cx + nx) / 2,           # midpoint on the edge
+                "sim_label_y": (cy + ny) / 2,
+                "edge_width": 1.5 + pipeline.gcn_neighbor_similarities[idx] * 4.0,
+            })
+
     best_result = pipeline.results[0] if pipeline.results else None
     top3_bars_html = ""
     if best_result:
@@ -213,10 +320,43 @@ def _build_result_context(
             "node_importance_html": node_importance,
         })
 
+    # Auto-feedback: derive true label from filename and write to DB if confident
+    true_label = _extract_true_label(sample_name)
+    auto_feedback: dict[str, bool | None] = {}
+    for r in pipeline.results:
+        if true_label is not None:
+            is_correct = _apply_auto_feedback(request_id, r.model_name, r.predicted_class, true_label)
+            auto_feedback[r.model_name] = is_correct
+            log.info(
+                "auto.feedback",
+                event_type="auto.feedback",
+                model_id=r.model_name,
+                true_label=true_label,
+                predicted=r.predicted_class,
+                auto_correct=is_correct,
+                auto_correct_int=1 if is_correct else 0,
+            )
+            log.info(
+                "label.feedback",
+                event_type="label.feedback",
+                model_id=r.model_name,
+                sample_set=sample_set,
+                true_label=true_label,
+                predicted_class=r.predicted_class,
+                is_correct=is_correct,
+                auto_correct_int=1 if is_correct else 0,
+                source="auto",
+            )
+        else:
+            auto_feedback[r.model_name] = None
+
     return {
         **_build_base_context(request),
         "has_results": True,
         "request_id": request_id,
+        "true_label": true_label,
+        "auto_feedback": auto_feedback,
+        "sample_set": sample_set,
         "original_image_b64": original_b64,
         "heatmap_b64": heatmap_b64,
         "text_density_html": text_density_html,
@@ -238,6 +378,14 @@ def _build_result_context(
         "gat_boxes": pipeline.gat_boxes,
         "gat_regions": gat_regions,
         "gat_legend": gat_legend,
+        # Inductive GCN neighborhood viz
+        "gcn_neighbors": gcn_neighbors,
+        "gcn_prediction": gcn_result.predicted_class if gcn_result else None,
+        "gcn_confidence": gcn_result.confidence if gcn_result else None,
+        "gcn_bank_size": pipeline.gcn_bank_size,
+        "gcn_inference_ms": gcn_result.inference_time_ms if gcn_result else None,
+        "gcn_agreement_count": sum(1 for n in gcn_neighbors if n["agrees"]),
+        "gcn_original_b64": original_b64,
     }
 
 
@@ -251,6 +399,29 @@ async def index(request: Request):
             "has_results": False,
         },
     )
+
+
+@router.get("/experiments")
+async def experiments():
+    import sqlite3
+    from fastapi.responses import RedirectResponse
+
+    exp_id = None
+    try:
+        db = MLFLOW_DB_PATH
+        if db and Path(db).exists():
+            with sqlite3.connect(db) as conn:
+                row = conn.execute(
+                    "SELECT experiment_id FROM experiments WHERE name = ? AND lifecycle_stage = 'active'",
+                    (MLFLOW_EXPERIMENT_NAME,),
+                ).fetchone()
+                if row:
+                    exp_id = row[0]
+    except Exception:
+        pass
+
+    url = f"{MLFLOW_UI_URL}/#/experiments/{exp_id}" if exp_id else MLFLOW_UI_URL
+    return RedirectResponse(url=url, status_code=302)
 
 
 @router.post("/classify")
@@ -275,7 +446,7 @@ async def classify(
     elif file and file.filename:
         action_type = "file_upload"
         sample_label = file.filename
-        sample_set = "upload"
+        sample_set = _infer_upload_sample_set(file.filename)
     else:
         action_type = "unknown"
         sample_label = None
@@ -317,7 +488,7 @@ async def classify(
         )
         try:
             context = _build_result_context(
-                request, image, sample_type="sample", sample_name=sample, request_id=request_id
+                request, image, sample_type="sample", sample_name=sample, sample_set=sample_set, request_id=request_id
             )
         except Exception as exc:
             log.error(
@@ -335,7 +506,7 @@ async def classify(
         )
         try:
             context = _build_result_context(
-                request, image, sample_type="upload", sample_name=file.filename or "upload", request_id=request_id
+                request, image, sample_type="upload", sample_name=file.filename or "upload", sample_set=sample_set, request_id=request_id
             )
         except Exception as exc:
             log.error(

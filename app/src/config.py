@@ -43,25 +43,28 @@ EVIDENTLY_DASHBOARD_URL = os.environ.get("EVIDENTLY_DASHBOARD_URL", "")
 SEQ_SERVER_URL = os.environ.get("SEQ_SERVER_URL", "")    # empty disables Seq ingestion (non-fatal)
 SEQ_API_KEY = os.environ.get("SEQ_API_KEY", "")          # blank = no auth (local dev)
 SEQ_UI_URL = os.environ.get("SEQ_UI_URL", "http://localhost:5341")
+MLFLOW_UI_URL = os.environ.get("MLFLOW_UI_URL", "http://localhost:5050")
+MLFLOW_DB_PATH = os.environ.get("MLFLOW_DB_PATH", str(_PROJECT_ROOT / "monitoring" / "mlflow" / "mlflow.db"))
+MLFLOW_EXPERIMENT_NAME = "GNN vs CNN — Document Classification"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "local")
 
 RVL_CDIP_LABELS = [
-    "letter",
-    "form",
-    "email",
-    "handwritten",
     "advertisement",
-    "scientific report",
-    "scientific publication",
-    "specification",
-    "file folder",
-    "news article",
     "budget",
+    "email",
+    "file folder",
+    "form",
+    "handwritten",
     "invoice",
+    "letter",
+    "memo",
+    "news article",
     "presentation",
     "questionnaire",
     "resume",
-    "memo",
+    "scientific publication",
+    "scientific report",
+    "specification",
 ]
 
 # GAT Multimodal

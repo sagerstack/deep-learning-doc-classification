@@ -324,6 +324,44 @@ def build_graph_dataset_text_aware(
     return graphs
 
 
+def feature_map_to_graph_fusion_knn(
+    features: torch.Tensor,
+    global_feat: torch.Tensor,
+    label: int,
+    k: int = 8,
+) -> Data:
+    """Convert spatial feature map to PyG Data with feature-space k-NN edges and global_feat.
+
+    Used by Exp16 Fusion GraphSAGE. Raw CNN features as nodes (no PE), cosine-similarity
+    k-NN edges, and global_feat stored separately for concat fusion.
+
+    Args:
+        features: Spatial features [C, H, W] — e.g., [2048, 7, 7]
+        global_feat: Global features [C] — e.g., [2048] from avgpool
+        label: Integer class label
+        k: Number of nearest neighbors per node in feature space
+
+    Returns:
+        PyG Data(x=[H*W, C], edge_index=[2, num_edges], y=[1], global_feat=[1, C])
+    """
+    c, h, w = features.shape
+    x = features.reshape(c, h * w).T  # [H*W, C]
+    y = torch.tensor([label], dtype=torch.long)
+
+    x_norm = x / (x.norm(dim=1, keepdim=True) + 1e-8)
+    sim = x_norm @ x_norm.T
+    sim.fill_diagonal_(-float('inf'))
+    _, topk_indices = sim.topk(k, dim=1)
+
+    sources = torch.arange(x.shape[0]).unsqueeze(1).expand_as(topk_indices).flatten()
+    targets = topk_indices.flatten()
+    edge_index = torch.stack([sources, targets], dim=0)
+
+    data = Data(x=x, edge_index=edge_index, y=y)
+    data.global_feat = global_feat.unsqueeze(0)  # [1, C]
+    return data
+
+
 def feature_map_to_graph_gated_boc(
     features: torch.Tensor,
     global_feat: torch.Tensor,

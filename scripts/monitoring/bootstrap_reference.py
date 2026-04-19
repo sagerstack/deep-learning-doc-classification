@@ -124,11 +124,9 @@ def bootstrap_synthetic_reference_dataset(
 
     MODELS = [
         ("cnn_baseline", "CNN Baseline (ResNet-50)", "1.0"),
-        ("graphsage_fusion", "Fusion GraphSAGE", "1.0"),
-        ("fusion_gat", "Fusion GAT", "1.0"),
-        ("boc_graphsage", "BoC GraphSAGE", "1.0"),
-        ("gated_boc_graphsage", "Gated BoC GraphSAGE", "1.0"),
-        ("attention_pool_graphsage", "Attention Pool GraphSAGE", "1.0"),
+        ("fusion_graphsage", "Fusion GraphSAGE", "1.0"),
+        ("inductive_gcn", "Inductive GCN", "1.0"),
+        ("multimodal_gat", "Multimodal GAT", "1.0"),
     ]
 
     records: list[dict] = []
