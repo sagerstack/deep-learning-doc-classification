@@ -6,11 +6,10 @@
 #   evidently      Evidently UI dashboard    Local poetry    → http://localhost:8080
 #
 # Usage:
-#   scripts/startup.sh              # start both services
+#   scripts/startup.sh              # start all services (includes Evidently batch job)
 #   scripts/startup.sh --reset      # rebuild Docker image before starting
 #   scripts/startup.sh --logs       # tail app logs after startup
-#   scripts/startup.sh --monitoring # also run the Evidently batch job on startup
-#   scripts/startup.sh --stop       # stop both services cleanly
+#   scripts/startup.sh --stop       # stop all services cleanly
 #   scripts/startup.sh -h           # show this help
 set -euo pipefail
 
@@ -38,7 +37,6 @@ MODELS=(
 # ── Flags ─────────────────────────────────────────────────────────────────────
 RESET=0
 FOLLOW_LOGS=0
-RUN_MONITORING=0
 STOP=0
 
 # ── Help ──────────────────────────────────────────────────────────────────────
@@ -49,7 +47,6 @@ Usage: scripts/startup.sh [OPTIONS]
 Options:
   --reset       Stop app, rebuild Docker image with --no-cache, recreate container.
   --logs        Follow app logs after startup (Ctrl+C to detach).
-  --monitoring  Run the Evidently batch job (last 24h) right after startup.
   --stop        Stop all services (app container + Evidently UI server).
   -h, --help    Show this help text.
 
@@ -60,7 +57,8 @@ Services started:
 Notes:
   - Model checkpoints must exist in models/ before the app can start.
   - The Evidently UI server reads monitoring/evidently_workspace directly.
-  - To push new monitoring snapshots manually:
+  - Startup always runs the Evidently batch job (last 24h) to refresh snapshots.
+  - To push additional monitoring snapshots between startups:
       poetry run python scripts/monitoring/run_evidently.py --window-hours 24
 EOF
 }
@@ -70,7 +68,6 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         --reset)      RESET=1 ;;
         --logs)       FOLLOW_LOGS=1 ;;
-        --monitoring) RUN_MONITORING=1 ;;
         --stop)       STOP=1 ;;
         -h|--help)    usage; exit 0 ;;
         *)
@@ -129,12 +126,21 @@ ensure_monitoring_dirs() {
     mkdir -p "$PROJECT_ROOT/monitoring/output"
     mkdir -p "$PROJECT_ROOT/monitoring/reference"
     mkdir -p "$EVIDENTLY_WORKSPACE"
+}
 
-    if [ ! -f "$REFERENCE_PARQUET" ]; then
-        echo "WARNING: Reference dataset not found."
-        echo "         Generate it with:"
-        echo "         poetry run python scripts/monitoring/bootstrap_reference.py --synthetic"
+bootstrap_reference_if_missing() {
+    if [ -f "$REFERENCE_PARQUET" ]; then
+        echo "==> Monitoring reference dataset present ($REFERENCE_PARQUET)"
+        return
     fi
+    echo "==> Monitoring reference dataset missing — generating synthetic baseline"
+    cd "$PROJECT_ROOT"
+    if ! poetry run python scripts/monitoring/bootstrap_reference.py --synthetic; then
+        echo "ERROR: Failed to generate reference dataset. Evidently drift detection"
+        echo "       requires this baseline."
+        exit 1
+    fi
+    echo "    Reference dataset generated"
 }
 
 build_gcn_feature_bank_if_missing() {
@@ -324,6 +330,7 @@ ensure_env_file
 load_env_file
 validate_models
 ensure_monitoring_dirs
+bootstrap_reference_if_missing
 build_gcn_feature_bank_if_missing
 
 # ── Start app (Docker) ────────────────────────────────────────────────────────
@@ -332,6 +339,9 @@ if [ "$RESET" -eq 1 ]; then
     docker compose down --remove-orphans --rmi local
     docker compose build --no-cache "$APP_SERVICE"
 fi
+
+echo "==> Starting Seq container (observability log store)"
+docker compose up -d seq
 
 echo "==> Starting app container"
 docker compose up -d --force-recreate "$APP_SERVICE"
@@ -347,10 +357,8 @@ start_evidently
 # ── Start MLflow UI (local poetry) ────────────────────────────────────────────
 start_mlflow
 
-# ── Optional: run monitoring batch job ───────────────────────────────────────
-if [ "$RUN_MONITORING" -eq 1 ]; then
-    run_monitoring_job
-fi
+# ── Run monitoring batch job (publishes snapshots into Evidently workspace) ──
+run_monitoring_job
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 APP_PORT="${APP_PORT:-9000}"
